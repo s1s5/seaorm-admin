@@ -1,0 +1,21 @@
+{% extends "base-form.jinja" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ site.sub_path }}/">Top</a></li>
+<li class="breadcrumb-item active"><a href="{{ site.sub_path }}/{{ model_name }}/">{{ model_name }}</a></li>
+<li class="breadcrumb-item active"><a href="{{ site.sub_path }}/{{ model_name }}/update/{{ page_id }}/">{{ page_id }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">delete</li>
+{% endblock breadcrumb %}
+
+{% block form_buttons %}
+<div class="d-flex justify-content-end">
+    <div><button id="{{ form_id }}-submit" type="button" class="btn btn-danger">confirm delete</button></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% call super() %}
+<script>
+    register_submit_callback("{{ form_id }}-submit", "../../");
+</script>
+{% endblock%}

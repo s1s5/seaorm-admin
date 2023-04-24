@@ -1,0 +1,49 @@
+<div>
+  <div class="row">
+    <input
+     type="hidden"
+     class="form-control datetime-input{% if with_timezone %}-with-timezone{% endif %}"
+     id="{{ name }}-id"
+     name="{{ name }}"
+     {% if let Some(value)=value %}value="{{ value.raw }}"{% endif %}
+    />
+    <div class="col-{% if with_timezone %}4{% else %}6{% endif %}">
+      <label for="{{ name }}-datetime-id" class="form-label">{{ label }}</label>
+      <input
+       type="datetime-local"
+       class="form-control"
+       id="{{ name }}-datetime-id"
+       aria-describedby="{{ name }}-datetime-help"
+       {% if let Some(value)=value %}value="{{ value.datetime_without_seconds }}"{% endif %}
+       {% if disabled%}disabled{%endif%}
+      />
+    </div>
+    <div class="col-{% if with_timezone %}4{% else %}6{% endif %}">
+      <label for="{{ name }}-seconds-id" class="form-label">seconds</label>
+      <input
+       type="number"
+       class="form-control"
+       id="{{ name }}-seconds-id"
+       aria-describedby="{{ name }}-seconds-help"
+       {% if let Some(value)=value %}value="{{ value.seconds }}"{% endif %}
+       {% if disabled%}disabled{%endif%}
+      />
+    </div>
+    {% if with_timezone %}
+      <div class="col-4">
+        <label for="{{ name }}-timezone-id" class="form-label">timezone(in seconds)</label>
+        <input
+         type="number"
+         class="form-control"
+         id="{{ name }}-timezone-id"
+         aria-describedby="{{ name }}-timezone-help"
+         step="60"
+         {% if let Some(value)=value %}value="{{ value.timezone }}"{% endif %}
+         {% if disabled%}disabled{%endif%}
+        />
+      </div>
+    {% endif %}
+  </div>
+  {% if let Some(help_text) = help_text %}<div id="{{ name }}-help" class="form-text">{{ help_text }}</div>{% endif %}
+  <p class="form-errors d-none text-danger"></p>
+</div>

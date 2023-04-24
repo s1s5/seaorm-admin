@@ -1,0 +1,13 @@
+<div class="form-check">
+  <input
+    type="checkbox"
+    class="form-check-input"
+    id="{{ name }}-id"
+    name="{{ name }}"
+    aria-describedby="{{ name }}-help"
+    {% if checked %}checked="checked"{% endif %}
+    {% if disabled%}disabled{%endif%}
+  />
+  <label for="{{ name }}-id" class="form-check-label">{{ label }}</label>
+</div>
+<p class="form-errors d-none text-danger"></p>

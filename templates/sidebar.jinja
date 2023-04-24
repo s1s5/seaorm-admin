@@ -1,0 +1,10 @@
+<table class="table">
+  <tbody>
+    {% for model in site.models %}
+    <tr>
+      <th scope="row"><a href="{{ site.sub_path }}/{{ model }}/">{{ model }}</a></th>
+      <td><a href="{{ site.sub_path }}/{{ model }}/create/">+ add</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

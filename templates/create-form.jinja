@@ -1,0 +1,14 @@
+{% extends "base-form.jinja" %}
+
+{% block form_buttons %}
+<div class="d-flex justify-content-end">
+    <button id="{{ form_id }}-submit" type="button" class="btn btn-primary">create</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% call super() %}
+<script>
+    register_submit_callback("{{ form_id }}-submit", "../");
+</script>
+{% endblock%}

@@ -1,0 +1,15 @@
+<label for="{{ name }}-id" class="form-label">{{ label }}</label>
+<input
+ type="{{ type }}"
+ class="form-control"
+ id="{{ name }}-id"
+ name="{{ name }}"
+ aria-describedby="{{ name }}-help"
+ {% if let Some(value)=value %}value="{{ value }}"{% endif %}
+ {% if disabled%}disabled{%endif%}
+ {% for (key, value) in attributes.iter() %}
+ {{key}}="{{value}}"
+ {% endfor %}
+/>
+{% if let Some(help_text) = help_text %}<div id="{{ name }}-help" class="form-text">{{ help_text }}</div>{% endif %}
+<p class="form-errors d-none text-danger"></p>

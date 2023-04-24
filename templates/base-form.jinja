@@ -1,0 +1,235 @@
+{% extends "base.jinja" %}
+
+{% block content %}
+<div class="row">
+  <div class="col-sm-3 col-md-2">
+    <div class="p-4">
+      {% include "sidebar.jinja" %}
+    </div>
+  </div>
+  <div class="col-sm-9 col-md-10">
+    <div class="container-sm p-3">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          {% block breadcrumb %}
+            <li class="breadcrumb-item"><a href="{{ site.sub_path }}/">Top</a></li>
+            <li class="breadcrumb-item active"><a href="{{ site.sub_path }}/{{ model_name }}/">{{ model_name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ page_id }}</li>
+          {% endblock breadcrumb %}
+        </ol>
+      </nav>
+      <form id="{{ form_id }}" {% if let Some(action)=action %}action="{{ action }}" {% endif %} method="{{ method }}">
+        <div id="form-alert" class="alert alert-danger d-none" role="alert">
+
+        </div>
+        {% for field in fields %}
+        <div class="mb-3">
+          {{ field|safe }}
+        </div>
+        {% endfor %}
+        <div class="p-3">
+          {% block form_buttons %} {% endblock %}
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endblock %}
+
+  {% block scripts %}
+  <script>
+    function extract_form(form_id) {
+      var form = document.getElementById(form_id);
+
+      let data = {};
+
+      var inputs = form.getElementsByTagName("input");
+      for (var i = 0; i < inputs.length; i++) {
+        let input = inputs[i];
+        if (input.type == "checkbox") {
+          data[input.name] = input.checked;
+        } else {
+          data[input.name] = input.value;
+        }
+      }
+
+      var textareas = form.getElementsByTagName("textarea");
+      for (var i = 0; i < textareas.length; i++) {
+        let textarea = textareas[i];
+        data[textarea.name] = textarea.value;
+      }
+
+      return data;
+    }
+
+    function show_error(error) {
+      var e = document.getElementById("form-alert");
+      e.innerText = JSON.stringify(error);
+      e.classList.remove("d-none");
+    }
+
+    function register_submit_callback(button_id, reirect_url_on_success) {
+      document.getElementById(button_id).addEventListener("click", function (event) {
+        event.preventDefault();
+
+        var submit = document.getElementById(button_id);
+        submit.disabled = true;
+
+        let data = extract_form("{{ form_id }}");
+
+        fetch({% if let Some(action) = action %}"{{ action}}"{% else %} window.location.pathname{% endif %}, {
+          method: "{{ method }}",
+            body: JSON.stringify(data),
+              headers: {
+                "Content-Type": "application/json",
+              }
+        })
+        .then(async function (response) {
+          let data = await response.json();
+          if (response.ok) {
+            return data;
+          } else {
+            throw data;
+          }
+        })
+        .then(function (data) {
+          // TODO: redirect
+          console.log(data); // handle response data
+          window.location.href = reirect_url_on_success;
+        })
+        .catch(function (error) {
+          // TODO: show errors
+          // Get the div element by its id
+          var myDiv = document.getElementById("form-alert");
+
+          // Set the inner text of the div to "Hello World"
+          myDiv.innerText = JSON.stringify(error);
+
+          // Remove the "d-none" class from the div
+          myDiv.classList.remove("d-none");
+          console.error(error); // handle error
+        }).finally(function () {
+          submit.disabled = false;
+        });
+      });
+    }
+  </script>
+  <script>
+    // Converts seconds to a string in the format "+hh:mm" or "-hh:mm"
+    function secondsToTimeString(seconds) {
+      const sign = Math.sign(seconds) === -1 ? "-" : "+"; // Determine sign of the time string
+      const absSeconds = Math.abs(seconds); // Convert to positive value for easier manipulation
+
+      const hours = Math.floor(absSeconds / 3600); // Calculate number of hours
+      const minutes = Math.floor((absSeconds % 3600) / 60); // Calculate number of minutes
+
+      // Format the time string
+      const formattedHours = String(hours).padStart(2, "0"); // Ensure two digits for hours
+      const formattedMinutes = String(minutes).padStart(2, "0"); // Ensure two digits for minutes
+      return sign + formattedHours + ":" + formattedMinutes;
+    }
+
+    window.addEventListener('load', (event) => {
+      document.querySelectorAll('.datetime-input').forEach(function(e) {
+        let name = e.attributes["name"].value;
+        let dt = document.querySelector(`#${name}-datetime-id`);
+        let se = document.querySelector(`#${name}-seconds-id`);
+
+        function setvalue() {
+          e.value = `${dt.value}:${se.value}`;
+        }
+
+        dt.addEventListener("change", setvalue);
+        se.addEventListener("change", setvalue);
+      });
+      document.querySelectorAll('.datetime-input-with-timezone').forEach(function(e) {
+        let name = e.attributes["name"].value;
+        let dt = document.querySelector(`#${name}-datetime-id`);
+        let se = document.querySelector(`#${name}-seconds-id`);
+        let tz = document.querySelector(`#${name}-timezone-id`);
+
+        function setvalue() {
+          let t = secondsToTimeString(Number(tz.value));
+          e.value = `${dt.value}:${se.value}${t}`;
+        }
+        dt.addEventListener("change", setvalue);
+        se.addEventListener("change", setvalue);
+        tz.addEventListener("change", setvalue);
+      });
+    });
+  </script>
+  <script>
+    function debounce(func, timeout) {
+      let timer;
+      // 引数に受け取った関数 func を拡張して返す
+      return function (...args) {
+        clearTimeout(timer);
+        // timeout で指定された時間後に呼び出しをスケジュール
+        timer = setTimeout(() => {
+          func.apply(this, args);
+        }, timeout);
+      };
+    }
+
+    async function get_choices(to_table, query) {
+      let res = await fetch(query == null ? `/${to_table}/` : `/${to_table}/?_q=${query}`, {
+        headers: {
+          "accept": "application/json"
+        }
+      });
+      let object_list = await res.json();
+      return object_list.data.map(e => ({
+        label: e.label,
+        value: e.key,
+        customProperties: {
+          data: e.data,
+        }
+      }));
+    }
+
+    window.addEventListener('load', (event) => {
+      document.querySelectorAll(".auto-complete").forEach(function (e) {
+        // console.log(e);
+        let to_table = e.attributes["data-to_table"].value;
+        let relations = [0, 1, 2].map(i => [e.attributes[`data-${i}-to`], e.attributes[`data-${i}-from`]]).filter(e => !!e[0]).map(e => [e[0].value, e[1].value]);
+        // console.log([0, 1, 2].map(e => [e.attributes[`data-${e}-to`], e.attributes[`data-${e}-from`]]).filter(e => !!e[0]).map(e => [e[0].value, e[1].value]));
+        // console.log(model);
+
+        let choices = new Choices(e, {
+          choices: [], // TODO
+          shouldSort: false,
+          searchChoices: false,
+        });
+        (async () => {
+          choices.setChoices(await get_choices(to_table, null), "value", "label", true);
+        })();
+
+        let on_search = debounce( async function(event) {
+          choices.setChoices(await get_choices(to_table, event.detail.value), "value", "label", true);
+        }, 100);
+
+        e.addEventListener(
+          'search',
+          on_search,
+          false,
+        );
+
+        e.addEventListener(
+          'addItem',
+          function (event) {
+            // console.log("addItem", event);
+            // console.log(event.detail.value, event.detail.label, event.detail.customProperties);
+            let data = event.detail.customProperties.data;
+            relations.forEach(rel => {
+              let target_el = document.querySelector(`#${rel[1]}-id`);
+              target_el.value = data[rel[0]];
+            })
+          },
+          false,
+        );
+
+
+      });
+    });
+
+  </script>
+  {% endblock %}

@@ -1,0 +1,20 @@
+[workspace]
+# A separate workspace
+
+[package]
+name = "seaorm-admin-rocket"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rocket = { version = "=0.5.0-rc.3" }
+seaorm-admin = { path="../../", features=["full"] }
+async-trait = "0.1.68"
+tokio = { version = "^1", features = ["macros", "rt-multi-thread", "io-util"] }
+entity = { path = "../entity" }
+
+[dependencies.sea-orm]
+version = "^0"
+features = [  "sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "debug-print" ]
