@@ -86,6 +86,46 @@ fn get_default_author() -> author::ActiveModel {
 struct AuthorAdmin;
 ```
 
+### use with Rocket
+```Rust
+use std::sync::Arc;
+use rocket::routes;
+use entity::author;
+use seaorm_admin::rocket_admin::*;
+use seaorm_admin::{Admin, ModelAdmin};
+
+#[derive(ModelAdmin, Default)]
+#[model_admin(module = author)
+
+let connection = Arc::new(
+    sea_orm::Database::connect(std::env::var("DATABASE_URL").unwrap())
+        .await
+        .expect("Could not connect to database. Please set DATABASE_URL"),
+);
+
+let mut admin = Admin::new(connection, "/admin");
+admin.add_model(AuthorAdmin);
+
+rocket::build()
+    .manage(admin)
+    .mount(
+        "/admin",
+        routes![
+            index,
+            list,
+            get_create_template,
+            create_model,
+            get_update_template,
+            update_model,
+            get_delete_template,
+            delete_model,
+        ],
+    )
+    .launch()
+    .await
+    .map(|_| ())
+```
+
 ### options
 - `module`
 required, set path of entity module.

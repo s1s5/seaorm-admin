@@ -99,7 +99,7 @@ impl Admin {
             site: templates::AdminSite {
                 title: "Admin".into(),
                 models: Vec::new(),
-                sub_path: sub_path.to_string(),
+                sub_path: sub_path.trim_end_matches('/').to_string(),
             },
         }
     }
