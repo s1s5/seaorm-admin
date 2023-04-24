@@ -27,7 +27,7 @@ base64 = "0.21.0"
 
 
 [dependencies.sea-orm]
-version = "^0"
+version = "*"
 features = [  "sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "debug-print" ]
 
 [dev-dependencies]
