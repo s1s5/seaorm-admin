@@ -113,9 +113,16 @@ pub fn json_convert_vec_to_json(
 
 // ============================================================================
 macro_rules! sanitize_value_check_empty {
-    ($ident: ident, $v: expr) => {
+    ($ident: ident, $col: expr, $v: expr) => {
         if json_value_is_empty($v) {
-            return Ok(sea_orm::Value::$ident(None));
+            if $col.def().is_null() {
+                return Ok(sea_orm::Value::$ident(None));
+            } else {
+                return Err(Box::new(sea_orm::DbErr::Custom(format!(
+                    "{:?} cannot be null",
+                    $col.to_string()
+                ))));
+            }
         }
     };
 }
@@ -145,74 +152,74 @@ where
             sea_orm::Value::String(Some(Box::new(v)))
         }
         sea_orm::ColumnType::TinyInteger => {
-            sanitize_value_check_empty!(TinyInt, v);
+            sanitize_value_check_empty!(TinyInt, col, v);
             sea_orm::Value::TinyInt(Some(parse_value::<i8>(v)?))
         }
         sea_orm::ColumnType::SmallInteger => {
-            sanitize_value_check_empty!(SmallInt, v);
+            sanitize_value_check_empty!(SmallInt, col, v);
             sea_orm::Value::SmallInt(Some(parse_value::<i16>(v)?))
         }
         sea_orm::ColumnType::Integer => {
-            sanitize_value_check_empty!(Int, v);
+            sanitize_value_check_empty!(Int, col, v);
             sea_orm::Value::Int(Some(parse_value::<i32>(v)?))
         }
         sea_orm::ColumnType::BigInteger => {
-            sanitize_value_check_empty!(BigInt, v);
+            sanitize_value_check_empty!(BigInt, col, v);
             sea_orm::Value::BigInt(Some(parse_value::<i64>(v)?))
         }
         sea_orm::ColumnType::TinyUnsigned => {
-            sanitize_value_check_empty!(TinyUnsigned, v);
+            sanitize_value_check_empty!(TinyUnsigned, col, v);
             sea_orm::Value::TinyUnsigned(Some(parse_value::<u8>(v)?))
         }
         sea_orm::ColumnType::SmallUnsigned => {
-            sanitize_value_check_empty!(SmallUnsigned, v);
+            sanitize_value_check_empty!(SmallUnsigned, col, v);
             sea_orm::Value::SmallUnsigned(Some(parse_value::<u16>(v)?))
         }
         sea_orm::ColumnType::Unsigned => {
-            sanitize_value_check_empty!(Unsigned, v);
+            sanitize_value_check_empty!(Unsigned, col, v);
             sea_orm::Value::Unsigned(Some(parse_value::<u32>(v)?))
         }
         sea_orm::ColumnType::BigUnsigned => {
-            sanitize_value_check_empty!(BigUnsigned, v);
+            sanitize_value_check_empty!(BigUnsigned, col, v);
             sea_orm::Value::BigUnsigned(Some(parse_value::<u64>(v)?))
         }
         sea_orm::ColumnType::Float => {
-            sanitize_value_check_empty!(Float, v);
+            sanitize_value_check_empty!(Float, col, v);
             sea_orm::Value::Float(Some(parse_value::<f32>(v)?))
         }
         sea_orm::ColumnType::Double => {
-            sanitize_value_check_empty!(Double, v);
+            sanitize_value_check_empty!(Double, col, v);
             sea_orm::Value::Double(Some(parse_value::<f64>(v)?))
         }
         sea_orm::ColumnType::Decimal(_o) => {
-            sanitize_value_check_empty!(Decimal, v);
+            sanitize_value_check_empty!(Decimal, col, v);
             let v: Decimal = serde_json::from_value(v.clone())?;
             sea_orm::Value::Decimal(Some(Box::new(v)))
         }
         sea_orm::ColumnType::DateTime | sea_orm::ColumnType::Timestamp => {
-            sanitize_value_check_empty!(ChronoDateTime, v);
+            sanitize_value_check_empty!(ChronoDateTime, col, v);
             let v: chrono::NaiveDateTime = serde_json::from_value(v.clone())?;
             sea_orm::Value::ChronoDateTime(Some(Box::new(v)))
         }
         sea_orm::ColumnType::TimestampWithTimeZone => {
-            sanitize_value_check_empty!(ChronoDateTimeWithTimeZone, v);
+            sanitize_value_check_empty!(ChronoDateTimeWithTimeZone, col, v);
             let v: chrono::DateTime<chrono::FixedOffset> = serde_json::from_value(v.clone())?;
             sea_orm::Value::ChronoDateTimeWithTimeZone(Some(Box::new(v)))
         }
         sea_orm::ColumnType::Time => {
-            sanitize_value_check_empty!(ChronoTime, v);
+            sanitize_value_check_empty!(ChronoTime, col, v);
             let v: chrono::NaiveTime = serde_json::from_value(v.clone())?;
             sea_orm::Value::ChronoTime(Some(Box::new(v)))
         }
         sea_orm::ColumnType::Date => {
-            sanitize_value_check_empty!(ChronoDate, v);
+            sanitize_value_check_empty!(ChronoDate, col, v);
             let v: chrono::NaiveDate = serde_json::from_value(v.clone())?;
             sea_orm::Value::ChronoDate(Some(Box::new(v)))
         }
         // sea_orm::ColumnType::Year(o) => {}
         // sea_orm::ColumnType::Interval(o) => {}
         sea_orm::ColumnType::Binary(_o) => {
-            sanitize_value_check_empty!(Bytes, v);
+            sanitize_value_check_empty!(Bytes, col, v);
             let v: String = serde_json::from_value(v.clone())?;
             let decoded = base64::engine::general_purpose::STANDARD.decode(&v)?;
             sea_orm::Value::Bytes(Some(Box::new(decoded)))
@@ -221,19 +228,19 @@ where
         // sea_orm::ColumnType::Bit(o) => {}
         // sea_orm::ColumnType::VarBit(o) => {}
         sea_orm::ColumnType::Boolean => {
-            sanitize_value_check_empty!(Bool, v);
+            sanitize_value_check_empty!(Bool, col, v);
             let v: bool = serde_json::from_value(v.clone())?;
             sea_orm::Value::Bool(Some(v))
         }
         // sea_orm::ColumnType::Money(o) => {}
         sea_orm::ColumnType::Json | sea_orm::ColumnType::JsonBinary => {
-            sanitize_value_check_empty!(Json, v);
+            sanitize_value_check_empty!(Json, col, v);
             let v: String = serde_json::from_value(v.clone())?;
             let v: Json = serde_json::from_str(&v)?;
             sea_orm::Value::Json(Some(Box::new(v.clone())))
         }
         sea_orm::ColumnType::Uuid => {
-            sanitize_value_check_empty!(Uuid, v);
+            sanitize_value_check_empty!(Uuid, col, v);
             let v: uuid::Uuid = serde_json::from_value(v.clone())?;
             sea_orm::Value::Uuid(Some(Box::new(v)))
         }
