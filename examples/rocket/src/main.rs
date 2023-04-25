@@ -1,8 +1,7 @@
-use std::sync::Arc;
-use rocket::routes;
 use entity::{author, post, test_model};
-use seaorm_admin::rocket_admin::*;
+use seaorm_admin::rocket_admin::get_admin_routes;
 use seaorm_admin::{Admin, ModelAdmin};
+use std::sync::Arc;
 
 fn format_author(model: &author::Model) -> String {
     format!("author[{}]({})", model.id, model.name)
@@ -28,7 +27,7 @@ fn get_default_author() -> author::ActiveModel {
 struct AuthorAdmin;
 
 #[derive(ModelAdmin, Default)]
-#[model_admin(module = post, auto_complete = [Author])]
+#[model_admin(module = post, auto_complete=[Author])]
 struct PostAdmin;
 
 #[derive(ModelAdmin, Default)]
@@ -43,26 +42,14 @@ async fn main() -> std::result::Result<(), rocket::Error> {
             .expect("Could not connect to database. Please set DATABASE_URL"),
     );
 
-    let mut admin = Admin::new(connection, "");
+    let mut admin = Admin::new(connection, "/admin");
     admin.add_model(AuthorAdmin);
     admin.add_model(PostAdmin);
     admin.add_model(TestAdmin);
 
     rocket::build()
+        .mount(admin.sub_path(), get_admin_routes())
         .manage(admin)
-        .mount(
-            "/",
-            routes![
-                index,
-                list,
-                get_create_template,
-                create_model,
-                get_update_template,
-                update_model,
-                get_delete_template,
-                delete_model,
-            ],
-        )
         .launch()
         .await
         .map(|_| ())

@@ -104,6 +104,10 @@ impl Admin {
         }
     }
 
+    pub fn sub_path(&self) -> &str {
+        &self.site.sub_path
+    }
+
     pub fn add_model<T>(&mut self, model_admin: T) -> &Self
     where
         T: ModelAdminTrait + Send + Sync + 'static,

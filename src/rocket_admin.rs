@@ -8,7 +8,7 @@ use rocket::{
     post,
     request::{FromRequest, Outcome},
     response::content,
-    State,
+    routes, Route, State,
 };
 use serde_json::json;
 use std::collections::HashMap;
@@ -81,7 +81,7 @@ fn return_json<T>(r: super::Result<T>) -> (Status, content::RawJson<String>) {
             content::RawJson::<String>(
                 serde_json::to_string(&json!({
                     "status": "failed",
-                    "error": format!("{:?}", error)
+                    "error": format!("{}", error)
                 }))
                 .unwrap(),
             ),
@@ -217,4 +217,17 @@ pub async fn delete_model(
     let data = json_overwrite_key(&data, &key).map_err(|_x| Status::InternalServerError)?;
 
     Ok(return_json(model.delete(&admin.conn, data).await))
+}
+
+pub fn get_admin_routes() -> Vec<Route> {
+    routes![
+        index,
+        list,
+        get_create_template,
+        create_model,
+        get_update_template,
+        update_model,
+        get_delete_template,
+        delete_model,
+    ]
 }
