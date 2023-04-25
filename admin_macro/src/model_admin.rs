@@ -280,7 +280,12 @@ impl ModelAdminExpander {
                 }
 
                 fn get_create_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
-                    #ident::get_form_fields().into_iter().map(|x| seaorm_admin::AdminField::create_from(&x, true)).collect()
+                    use sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
+
+                    let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
+                    #ident::get_form_fields().into_iter().filter(
+                        |x| !keys.contains(&x.to_string())).map(
+                            |x| seaorm_admin::AdminField::create_from(&x, true)).collect()
                 }
 
                 fn get_update_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
