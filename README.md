@@ -15,6 +15,23 @@ sea-orm = "^0"
 async-trait = "^0"
 ```
 
+## Run Example
+- run postgres
+```shell
+$ docker run --rm --tmpfs=/pgtmpfs \
+    -e PGDATA=/pgtmpfs -e POSTGRES_HOST_AUTH_METHOD=trust \
+    --name postgres -p  15432:5432 postgres
+```
+- in another shell
+```shell
+$ export DATABASE_URL=postgres://postgres:postgres@localhost:15432/postgres
+$ cd examples/migrations
+$ cargo run
+$ cd ../rocket
+$ cargo run
+# access http://localhost:8000/admin/
+```
+
 ## Usage
 example entity file.
 ```Rust
