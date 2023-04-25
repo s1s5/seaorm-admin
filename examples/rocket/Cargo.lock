@@ -2010,7 +2010,6 @@ dependencies = [
  "base64 0.21.0",
  "bigdecimal",
  "chrono",
- "env_logger",
  "itertools",
  "log",
  "rocket",
@@ -2029,6 +2028,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "entity",
+ "env_logger",
  "rocket",
  "sea-orm",
  "seaorm-admin",

@@ -36,6 +36,8 @@ struct TestAdmin;
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), rocket::Error> {
+    env_logger::init();
+
     let connection = Arc::new(
         sea_orm::Database::connect(std::env::var("DATABASE_URL").unwrap())
             .await
