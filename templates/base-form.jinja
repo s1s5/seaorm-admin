@@ -92,19 +92,13 @@
           }
         })
         .then(function (data) {
-          // TODO: redirect
-          console.log(data); // handle response data
           window.location.href = reirect_url_on_success;
         })
         .catch(function (error) {
-          // TODO: show errors
-          // Get the div element by its id
           var myDiv = document.getElementById("form-alert");
+          // myDiv.innerText = JSON.stringify(error.error);
+          myDiv.innerText = error.error;
 
-          // Set the inner text of the div to "Hello World"
-          myDiv.innerText = JSON.stringify(error);
-
-          // Remove the "d-none" class from the div
           myDiv.classList.remove("d-none");
           console.error(error); // handle error
         }).finally(function () {
@@ -160,10 +154,8 @@
   <script>
     function debounce(func, timeout) {
       let timer;
-      // 引数に受け取った関数 func を拡張して返す
       return function (...args) {
         clearTimeout(timer);
-        // timeout で指定された時間後に呼び出しをスケジュール
         timer = setTimeout(() => {
           func.apply(this, args);
         }, timeout);
@@ -188,14 +180,11 @@
 
     window.addEventListener('load', (event) => {
       document.querySelectorAll(".auto-complete").forEach(function (e) {
-        // console.log(e);
         let to_table = e.attributes["data-to_table"].value;
         let relations = [0, 1, 2].map(i => [e.attributes[`data-${i}-to`], e.attributes[`data-${i}-from`]]).filter(e => !!e[0]).map(e => [e[0].value, e[1].value]);
-        // console.log([0, 1, 2].map(e => [e.attributes[`data-${e}-to`], e.attributes[`data-${e}-from`]]).filter(e => !!e[0]).map(e => [e[0].value, e[1].value]));
-        // console.log(model);
 
         let choices = new Choices(e, {
-          choices: [], // TODO
+          choices: [],
           shouldSort: false,
           searchChoices: false,
         });
@@ -216,8 +205,6 @@
         e.addEventListener(
           'addItem',
           function (event) {
-            // console.log("addItem", event);
-            // console.log(event.detail.value, event.detail.label, event.detail.customProperties);
             let data = event.detail.customProperties.data;
             relations.forEach(rel => {
               let target_el = document.querySelector(`#${rel[1]}-id`);
