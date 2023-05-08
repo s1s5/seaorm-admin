@@ -112,6 +112,7 @@ use std::sync::Arc;
 
 #[derive(ModelAdmin, Default)]
 #[model_admin(module = author)
+struct AuthorAdmin;
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), rocket::Error> {
