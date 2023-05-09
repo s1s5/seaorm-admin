@@ -383,6 +383,7 @@ mod tests {
             #[sea_orm(primary_key)]
             pub id: i32,
 
+            // field test
             #[sea_orm(column_type = "Char(Some(32))", nullable)]
             pub char_f: Option<String>,
 
@@ -419,8 +420,34 @@ mod tests {
             pub json_binary_f: Option<Json>,
             pub uuid_f: Option<Uuid>,
 
+            // enum test
             pub enum_string: Option<Category>,
             pub enum_i32: Option<Color>,
+        }
+
+        #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+        pub enum Relation {}
+
+        impl ActiveModelBehavior for ActiveModel {}
+    }
+
+    mod nulltest {
+        use sea_orm::entity::prelude::*;
+
+        #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+        #[sea_orm(table_name = "nulltest_model")]
+        pub struct Model {
+            #[sea_orm(primary_key)]
+            pub id: i32,
+
+            #[sea_orm(column_type = "Char(Some(32))", nullable)]
+            pub nullable_char_f: Option<String>,
+
+            #[sea_orm(column_type = "Char(Some(32))")]
+            pub nonnull_char_f: String,
+
+            pub nullable_integer_f: Option<i32>,
+            pub nonnull_integer_f: i32,
         }
 
         #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -433,6 +460,10 @@ mod tests {
         #[derive(crate::ModelAdmin, Default)]
         #[model_admin(module = super::test_model)]
         pub struct TestModelAdmin;
+
+        #[derive(crate::ModelAdmin, Default)]
+        #[model_admin(module = super::nulltest)]
+        pub struct NullTestAdmin;
     }
 
     #[test]
@@ -574,6 +605,37 @@ mod tests {
 
         assert_eq!(updated["a"], 3);
         assert_eq!(updated["b"], 2);
+    }
+
+    #[test]
+    fn test_nulltest() {
+        let fields = nulltest::Column::iter().collect();
+        let mut a = nulltest::ActiveModel {
+            ..Default::default()
+        };
+        let mut jv = json!({
+            "id": "1",
+            "nullable_char_f": "",
+            "nonnull_char_f": "",
+            "nullable_integer_f": "",
+            "nonnull_integer_f": "1",
+        });
+
+        set_from_json(&mut a, &fields, &jv).expect("set_from_json failed");
+        let b: nulltest::Model = a
+            .clone()
+            .try_into_model()
+            .expect("failed to convert ActiveModel to Model");
+        assert_eq!(b.id, 1);
+        assert_eq!(b.nullable_char_f, None);
+        assert_eq!(b.nonnull_char_f, "".to_string());
+        assert_eq!(b.nullable_integer_f, None);
+        assert_eq!(b.nonnull_integer_f, 1);
+
+        jv["nonnull_integer_f"] = Json::String("".to_string());
+
+        let set_result = set_from_json(&mut a, &fields, &jv);
+        assert_eq!(set_result.is_err(), true);
     }
 
     // #[test]
