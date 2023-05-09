@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 pub use async_trait::async_trait;
-use sea_orm::RelationDef;
-pub use sea_orm::{DatabaseConnection, EntityName, Iden, ModelTrait, PrimaryKeyToColumn};
+pub use sea_orm;
+pub use sea_orm::Iden; // なんで必要なのかわからん・・
+use sea_orm::{DatabaseConnection, RelationDef};
 
 mod admin;
 mod error;

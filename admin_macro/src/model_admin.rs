@@ -90,7 +90,7 @@ impl ModelAdminExpander {
             Ok(quote! {
                 impl #ident {
                     fn get_list_display() -> Vec<#module::Column> {
-                        use sea_orm::Iterable;
+                        use seaorm_admin::sea_orm::Iterable;
                         #module :: Column::iter().collect()
                     }
                 }
@@ -128,18 +128,19 @@ impl ModelAdminExpander {
 
             Ok(quote! {
                 impl #ident {
-                    fn get_ordering() -> Vec<(#module::Column, sea_orm::Order)> {
-                        vec![#((#module :: Column :: #columns, sea_orm::Order:: #order)),*]
+                    fn get_ordering() -> Vec<(#module::Column, seaorm_admin::sea_orm::Order)> {
+                        vec![#((#module :: Column :: #columns, seaorm_admin::sea_orm::Order:: #order)),*]
                     }
                 }
             })
         } else {
             Ok(quote! {
                 impl #ident {
-                    fn get_ordering() -> Vec<(#module::Column, sea_orm::Order)> {
-                        use sea_orm::{Iterable, PrimaryKeyToColumn};
-                        #module::PrimaryKey::iter().map(|x| (x.into_column(), sea_orm::Order::Desc)).collect()
-
+                    fn get_ordering() -> Vec<(#module::Column, seaorm_admin::sea_orm::Order)> {
+                        use seaorm_admin::sea_orm::{Iterable, PrimaryKeyToColumn};
+                        #module::PrimaryKey::iter()
+                            .map(|x| (x.into_column(), seaorm_admin::sea_orm::Order::Desc))
+                            .collect()
                     }
                 }
             })
@@ -152,7 +153,7 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
                 fn get_fields() -> Vec<#module :: Column> {
-                    use sea_orm::Iterable;
+                    use seaorm_admin::sea_orm::Iterable;
                     #module :: Column::iter().collect()
                 }
             }
@@ -174,7 +175,7 @@ impl ModelAdminExpander {
             Ok(quote!(
                 impl #ident {
                     fn get_form_fields() -> Vec<#module :: Column> {
-                        use sea_orm::Iterable;
+                        use seaorm_admin::sea_orm::Iterable;
                         #module :: Column::iter().collect()
                     }
                 }
@@ -188,7 +189,7 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
                 fn get_keys() -> Vec<#module :: Column> {
-                    use sea_orm::{Iterable, PrimaryKeyToColumn};
+                    use seaorm_admin::sea_orm::{Iterable, PrimaryKeyToColumn};
                     #module :: PrimaryKey::iter().map(|x| x.into_column()).collect()
                 }
             }
@@ -210,7 +211,7 @@ impl ModelAdminExpander {
             Ok(quote!(
                 impl #ident {
                     fn get_search_fields() -> Vec<#module :: Column> {
-                        use sea_orm::{Iterable, PrimaryKeyToColumn};
+                        use seaorm_admin::sea_orm::{Iterable, PrimaryKeyToColumn};
                         #module :: PrimaryKey::iter().map(|x| x.into_column()).collect()
                     }
                 }
@@ -256,10 +257,10 @@ impl ModelAdminExpander {
         let module = &self.module;
 
         Ok(quote!(
-            #[async_trait::async_trait]
+            #[seaorm_admin::async_trait]
             impl seaorm_admin::ModelAdminTrait for #ident {
                 fn get_table_name(&self) -> &str {
-                    use sea_orm::EntityName;
+                    use seaorm_admin::sea_orm::EntityName;
                     #module ::Entity{}.table_name()
                 }
 
@@ -280,7 +281,7 @@ impl ModelAdminExpander {
                 }
 
                 fn get_create_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
-                    use sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
+                    use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
 
                     let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
                     #ident::get_form_fields().into_iter().filter(
@@ -289,10 +290,13 @@ impl ModelAdminExpander {
                 }
 
                 fn get_update_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
-                    use sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
+                    use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
 
                     let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
-                    #ident::get_form_fields().into_iter().map(|x| seaorm_admin::AdminField::create_from(&x, !keys.contains(&x.to_string()))).collect()
+                    #ident::get_form_fields()
+                        .into_iter()
+                        .map(|x| seaorm_admin::AdminField::create_from(&x, !keys.contains(&x.to_string())))
+                        .collect()
                 }
 
                 fn list_display(&self) -> Vec<String> {
@@ -301,32 +305,32 @@ impl ModelAdminExpander {
                     #ident::get_list_display().iter().map(|x| x.to_string()).collect()
                 }
 
-                fn get_auto_complete(&self) -> Vec<sea_orm::RelationDef> {
-                    use sea_orm::RelationTrait;
+                fn get_auto_complete(&self) -> Vec<seaorm_admin::sea_orm::RelationDef> {
+                    use seaorm_admin::sea_orm::RelationTrait;
                     #ident::get_auto_complete().iter().map(|x| x.def()).collect()
                 }
 
                 async fn list(
                     &self,
-                    conn: &sea_orm::DatabaseConnection,
+                    conn: &seaorm_admin::sea_orm::DatabaseConnection,
                     query: &seaorm_admin::ListQuery,
                 ) -> seaorm_admin::Result<(u64, Vec<seaorm_admin::Json>)> {
                     #ident::list_impl(conn, query).await
                 }
 
-                async fn get(&self, conn: &sea_orm::DatabaseConnection, key: seaorm_admin::Json) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
+                async fn get(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, key: seaorm_admin::Json) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
                     #ident::get_impl(conn, key).await
                 }
 
-                async fn insert(&self, conn: &sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
+                async fn insert(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
                     #ident::insert_impl(conn, value).await
                 }
 
-                async fn update(&self, conn: &sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
+                async fn update(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
                     #ident::update_impl(conn, value).await
                 }
 
-                async fn delete(&self, conn: &sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<u64> {
+                async fn delete(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<u64> {
                     #ident::delete_impl(conn, value).await
                 }
             }
@@ -340,7 +344,7 @@ impl ModelAdminExpander {
             Ok(quote!(
                 impl #ident {
                     fn to_str_impl(value: &seaorm_admin::Json) -> seaorm_admin::Result<String> {
-                        use sea_orm::TryIntoModel;
+                        use seaorm_admin::sea_orm::TryIntoModel;
                         let mut model = #module::ActiveModel { ..Default::default() };
                         seaorm_admin::set_from_json(&mut model, &#ident::get_fields(), &value)?;
                         Ok(#format(&model.try_into_model()?))
@@ -351,12 +355,15 @@ impl ModelAdminExpander {
             Ok(quote!(
                 impl #ident {
                     fn to_str_impl(value: &seaorm_admin::Json) -> seaorm_admin::Result<String> {
-                        use sea_orm::{EntityName, Iterable, PrimaryKeyToColumn, Iden};
+                        use seaorm_admin::sea_orm::{EntityName, Iterable, PrimaryKeyToColumn, Iden};
                         let n = seaorm_admin::Json::Null;
                         let keys: Vec<_> = #ident::get_keys().iter().map(|x| x.to_string()).collect();
                         let values: Vec<_> = keys.iter().map(|x| value.get(x).unwrap_or(&n)).collect();
                         let values: Vec<_> = values.iter().map(|x| seaorm_admin::json_force_str(x)).collect();
-                        let s: Vec<_> = keys.into_iter().zip(values.into_iter()).map(|(x, y) | format!("{}={}", x, y)).collect();
+                        let s: Vec<_> = keys.into_iter()
+                                            .zip(values.into_iter())
+                                            .map(|(x, y) | format!("{}={}", x, y))
+                                            .collect();
                         Ok(format!("{}: [{}]", #module ::Entity{}.table_name(), s.join(", ")))
                     }
                 }
@@ -371,10 +378,10 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
             async fn list_impl(
-                conn: &sea_orm::DatabaseConnection,
+                conn: &seaorm_admin::sea_orm::DatabaseConnection,
                 query: &seaorm_admin::ListQuery,
             ) -> seaorm_admin::Result<(u64, Vec<seaorm_admin::Json>)> {
-                use sea_orm::{EntityTrait, QuerySelect, PaginatorTrait};
+                use seaorm_admin::sea_orm::{EntityTrait, QuerySelect, PaginatorTrait};
 
                 let fields = #ident::get_fields();
                 let qs = #module::Entity::find();
@@ -382,7 +389,13 @@ impl ModelAdminExpander {
                 let qs = seaorm_admin::filter_by_hash_map(qs, &fields, &query.filter)?;
                 let qs = seaorm_admin::search_by_queries(qs, &#ident::get_search_fields(), &query.queries)?;
                 let count = qs.clone().count(conn).await?;
-                qs.offset(query.offset).limit(query.limit).all(conn).await?.into_iter().map(|x| seaorm_admin::to_json(x, &fields)).collect::<seaorm_admin::Result<Vec<_>>>().map(|x| (count, x))
+                qs.offset(query.offset)
+                    .limit(query.limit)
+                    .all(conn).await?
+                    .into_iter()
+                    .map(|x| seaorm_admin::to_json(x, &fields))
+                    .collect::<seaorm_admin::Result<Vec<_>>>()
+                    .map(|x| (count, x))
             }
         }
         ))
@@ -394,8 +407,11 @@ impl ModelAdminExpander {
 
         Ok(quote!(
             impl #ident {
-            async fn get_impl(conn: &sea_orm::DatabaseConnection, key: seaorm_admin::Json) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
-                use sea_orm::EntityTrait;
+            async fn get_impl(
+                conn: &seaorm_admin::sea_orm::DatabaseConnection,
+                key: seaorm_admin::Json
+            ) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
+                use seaorm_admin::sea_orm::EntityTrait;
 
                 let fields = #ident::get_fields();
                 let qs = #module::Entity::find();
@@ -420,8 +436,11 @@ impl ModelAdminExpander {
 
         Ok(quote!(
             impl #ident {
-                async fn insert_impl(conn: &sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
-                    use sea_orm::{EntityTrait, ActiveModelTrait, TryIntoModel};
+                async fn insert_impl(
+                    conn: &seaorm_admin::sea_orm::DatabaseConnection,
+                    value: seaorm_admin::Json
+                ) -> seaorm_admin::Result<seaorm_admin::Json> {
+                    use seaorm_admin::sea_orm::{EntityTrait, ActiveModelTrait, TryIntoModel};
 
                     let fields = #ident::get_fields();
                     let mut model = #ident::get_default_value();
@@ -439,8 +458,11 @@ impl ModelAdminExpander {
 
         Ok(quote!(
             impl #ident {
-                async fn update_impl(conn: &sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
-                    use sea_orm::{TryIntoModel, ActiveModelTrait, EntityTrait};
+                async fn update_impl(
+                    conn: &seaorm_admin::sea_orm::DatabaseConnection,
+                    value: seaorm_admin::Json
+                ) -> seaorm_admin::Result<seaorm_admin::Json> {
+                    use seaorm_admin::sea_orm::{TryIntoModel, ActiveModelTrait, EntityTrait};
 
                     let fields = #ident::get_fields();
                     let mut model = #module::ActiveModel { ..Default::default() };
@@ -458,8 +480,11 @@ impl ModelAdminExpander {
 
         Ok(quote!(
             impl #ident {
-            async fn delete_impl(conn: &sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<u64> {
-                use sea_orm::{EntityTrait, ModelTrait};
+            async fn delete_impl(
+                conn: &seaorm_admin::sea_orm::DatabaseConnection,
+                value: seaorm_admin::Json
+            ) -> seaorm_admin::Result<u64> {
+                use seaorm_admin::sea_orm::{EntityTrait, ModelTrait};
 
                 let qs = #module::Entity::find();
                 let qs = {

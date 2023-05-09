@@ -2026,7 +2026,6 @@ dependencies = [
 name = "seaorm-admin-rocket"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "entity",
  "env_logger",
  "rocket",

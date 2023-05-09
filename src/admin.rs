@@ -4,7 +4,7 @@ use itertools::Itertools;
 use sea_orm::DatabaseConnection;
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    ops::Deref,
 };
 
 fn identity_to_vec_string(ident: &sea_orm::Identity) -> Vec<String> {
@@ -85,16 +85,39 @@ fn to_query_string(params: &HashMap<String, Vec<String>>, page: u64) -> String {
     query
 }
 
+trait Connector {
+    fn get_connection(&self) -> &DatabaseConnection;
+}
+
+struct ConnectorImpl<C>
+where
+    C: Deref<Target = DatabaseConnection> + Sync + Send,
+{
+    conn: C,
+}
+
+impl<C> Connector for ConnectorImpl<C>
+where
+    C: Deref<Target = DatabaseConnection> + Sync + Send,
+{
+    fn get_connection(&self) -> &DatabaseConnection {
+        self.conn.deref()
+    }
+}
+
 pub struct Admin {
-    pub conn: Arc<DatabaseConnection>,
+    conn: Box<dyn Connector + Sync + Send>,
     pub models: HashMap<String, Box<dyn ModelAdminTrait + Send + Sync>>,
     pub site: templates::AdminSite,
 }
 
 impl Admin {
-    pub fn new(conn: Arc<DatabaseConnection>, sub_path: &str) -> Self {
+    pub fn new<C>(conn: C, sub_path: &str) -> Self
+    where
+        C: Deref<Target = DatabaseConnection> + Sync + Send + 'static,
+    {
         Admin {
-            conn: conn,
+            conn: Box::new(ConnectorImpl { conn }),
             models: HashMap::new(),
             site: templates::AdminSite {
                 title: "Admin".into(),
@@ -102,6 +125,10 @@ impl Admin {
                 sub_path: sub_path.trim_end_matches('/').to_string(),
             },
         }
+    }
+
+    pub fn get_connection(&self) -> &DatabaseConnection {
+        self.conn.get_connection()
     }
 
     pub fn sub_path(&self) -> &str {
@@ -192,7 +219,7 @@ impl Admin {
         query_param: &HashMap<String, Vec<String>>,
     ) -> Result<Json> {
         let query = super::parse_query(query_param, model.get_list_per_page())?;
-        let (total, object_list) = model.list(&self.conn, &query).await?;
+        let (total, object_list) = model.list(&self.get_connection(), &query).await?;
         super::json_convert_vec_to_json(model, total, object_list)
     }
 
@@ -202,7 +229,7 @@ impl Admin {
         query_param: &HashMap<String, Vec<String>>,
     ) -> Result<templates::AdminList> {
         let query = super::parse_query(query_param, model.get_list_per_page())?;
-        let (count, object_list) = model.list(&self.conn, &query).await?;
+        let (count, object_list) = model.list(&self.get_connection(), &query).await?;
         let list_per_page = model.get_list_per_page();
         let num_pages = (count + list_per_page - 1) / list_per_page;
         let current_page = query.offset / list_per_page;
@@ -294,7 +321,10 @@ impl Admin {
                 .filter(|x| x.1.filter(|x| !x.is_null()).is_some())
                 .map(|x| (x.0, x.1.unwrap().clone()))
                 .collect();
-            let tr = tm.get(&self.conn, Json::Object(m)).await.unwrap_or(None);
+            let tr = tm
+                .get(&self.get_connection(), Json::Object(m))
+                .await
+                .unwrap_or(None);
 
             if let Some(tr) = tr {
                 result.push(Some((tm, tr)));
