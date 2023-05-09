@@ -135,7 +135,7 @@ async fn main() -> std::result::Result<(), rocket::Error> {
 }
 ```
 
-### options
+## options
 - `module`
 required, set path of entity module.
 - `list_display`
@@ -152,3 +152,11 @@ list of (Column, Asc | Desc). used in list view.
 identity for Model -> String function. used in auto_complete
 - `default_value`
 identity for the function returns AtctiveModel. used when creating.
+
+## null handling when set empty string in the form
+| nullable | field | db-value |
+| -------- | ----- | -------- |
+| nullable | Char, String | null |
+| non-null | Char, String | "" |
+| nullable | other | null |
+| non-null | other | error |
