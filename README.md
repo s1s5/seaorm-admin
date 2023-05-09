@@ -73,6 +73,7 @@ use entity::author;
 
 #[derive(ModelAdmin, Default)]
 #[model_admin(module = author)
+struct AuthorAdmin;
 ```
 
 ### full option
