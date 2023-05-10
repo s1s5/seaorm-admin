@@ -1,4 +1,5 @@
 use entity::{author, post, test_model};
+use sea_orm::Set;
 use seaorm_admin::rocket_admin::get_admin_routes;
 use seaorm_admin::{Admin, ModelAdmin};
 use std::sync::Arc;
@@ -7,8 +8,9 @@ fn format_author(model: &author::Model) -> String {
     format!("author[{}]({})", model.id, model.name)
 }
 
-fn get_default_author() -> author::ActiveModel {
+fn get_initial_author() -> author::ActiveModel {
     author::ActiveModel {
+        main_post_id: Set(None),
         ..Default::default()
     }
 }
@@ -22,7 +24,7 @@ fn get_default_author() -> author::ActiveModel {
     search_fields = [Id, Name],
     ordering = [(Id, Desc)],
     format = format_author,
-    default_value = get_default_author
+    initial_value = get_initial_author
 )]
 struct AuthorAdmin;
 

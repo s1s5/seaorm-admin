@@ -1,7 +1,7 @@
 use super::{templates, AdminField, CustomError, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
 use itertools::Itertools;
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, DeriveIden};
 use std::{
     collections::{HashMap, HashSet},
     ops::Deref,
@@ -167,9 +167,12 @@ impl Admin {
             .flat_map(|x| identity_to_vec_string(&x.from_col))
             .collect();
 
+        let field_names: HashSet<_> = base_fields.iter().map(|x| x.name.clone()).collect();
+
         let auto_complete_fields: Vec<_> = auto_complete
             .iter()
             .zip(relations.into_iter())
+            .filter(|x| field_names.contains(&x.0.from_col.to_string()))
             .map(|(x, rel)| {
                 Ok(Box::new(templates::AdminFormAutoComplete {
                     name: relation_def_to_form_name(&x)?,

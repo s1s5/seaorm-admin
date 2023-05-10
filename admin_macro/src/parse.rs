@@ -98,8 +98,8 @@ pub fn parse_format<'a>(ident: &'a Ident, nv: &'a MetaNameValue) -> Result<&'a I
     parse_path_ident(ident, nv, "format must be ident")
 }
 
-pub fn parse_default_value<'a>(ident: &'a Ident, nv: &'a MetaNameValue) -> Result<&'a Ident> {
-    parse_path_ident(ident, nv, "default_value must be ident")
+pub fn parse_initial_value<'a>(ident: &'a Ident, nv: &'a MetaNameValue) -> Result<&'a Ident> {
+    parse_path_ident(ident, nv, "initial_value must be ident")
 }
 
 pub fn parse_ordering(ident: &Ident, nv: &MetaNameValue) -> Result<Vec<(Expr, Expr)>> {

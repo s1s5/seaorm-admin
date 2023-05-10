@@ -17,7 +17,7 @@ pub struct ModelAdminExpander {
     ordering: Option<Vec<(syn::Expr, syn::Expr)>>,
     search_fields: Option<Vec<syn::Expr>>,
     format: Option<Ident>,
-    default_value: Option<Ident>,
+    initial_value: Option<Ident>,
 }
 
 impl ModelAdminExpander {
@@ -29,7 +29,7 @@ impl ModelAdminExpander {
         let mut ordering = None;
         let mut search_fields = None;
         let mut format = None;
-        let mut default_value = None;
+        let mut initial_value = None;
 
         attrs.iter().try_for_each(|attr| {
             if let Ok(list) = attr.parse_args_with(Punctuated::<Meta, Comma>::parse_terminated) {
@@ -52,9 +52,9 @@ impl ModelAdminExpander {
                                     Some(super::parse::parse_search_fields(ident, &nv)?);
                             } else if ident == "format" {
                                 format = Some(super::parse::parse_format(ident, nv)?.clone());
-                            } else if ident == "default_value" {
-                                default_value =
-                                    Some(super::parse::parse_default_value(ident, nv)?.clone());
+                            } else if ident == "initial_value" {
+                                initial_value =
+                                    Some(super::parse::parse_initial_value(ident, nv)?.clone());
                             }
                         }
                     }
@@ -73,7 +73,7 @@ impl ModelAdminExpander {
             ordering,
             search_fields,
             format,
-            default_value,
+            initial_value,
         })
     }
 
@@ -244,21 +244,21 @@ impl ModelAdminExpander {
         ))
     }
 
-    fn expand_get_default_value(&self) -> Result {
+    fn expand_get_initial_value(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
-        if let Some(default_value) = &self.default_value {
+        if let Some(initial_value) = &self.initial_value {
             Ok(quote!(
                 impl #ident {
-                    fn get_default_value() -> #module::ActiveModel {
-                        #default_value ()
+                    fn get_initial_value() -> #module::ActiveModel {
+                        #initial_value ()
                     }
                 }
             ))
         } else {
             Ok(quote!(
                 impl #ident {
-                    fn get_default_value() -> #module::ActiveModel {
+                    fn get_initial_value() -> #module::ActiveModel {
                         #module::ActiveModel { ..Default::default() }
                     }
                 }
@@ -295,11 +295,16 @@ impl ModelAdminExpander {
                 }
 
                 fn get_create_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
-                    use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
+                    use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait};
 
+                    // primary keyは隠す
                     let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
+                    let model = #ident::get_initial_value();
+
                     #ident::get_form_fields().into_iter().filter(
-                        |x| !keys.contains(&x.to_string())).map(
+                        |x| !keys.contains(&x.to_string())).filter(
+                            |x| !model.get(*x).is_set()
+                        ).map(
                             |x| seaorm_admin::AdminField::create_from(&x, true)).collect()
                 }
 
@@ -501,7 +506,7 @@ impl ModelAdminExpander {
                     use seaorm_admin::sea_orm::{EntityTrait, ActiveModelTrait, TryIntoModel};
 
                     let fields = #ident::get_fields();
-                    let mut model = #ident::get_default_value();
+                    let mut model = #ident::get_initial_value();
                     seaorm_admin::set_from_json(&mut model, &fields, &value)?;
                     let saved: #module::Model = model.insert(conn).await?.try_into_model()?;
                     seaorm_admin::to_json(&saved, &fields)
@@ -572,7 +577,7 @@ impl ModelAdminExpander {
             self.expand_get_keys()?,
             self.expand_get_search_fields()?,
             self.expand_get_list_per_page()?,
-            self.expand_get_default_value()?,
+            self.expand_get_initial_value()?,
             self.expand_impl()?,
             self.expand_to_str_impl()?,
             self.expand_to_json_for_list()?,

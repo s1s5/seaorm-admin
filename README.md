@@ -84,7 +84,7 @@ fn format_author(model: &author::Model) -> String {
     format!("author[{}]({})", model.id, model.name)
 }
 
-fn get_default_author() -> author::ActiveModel {
+fn get_initial_author() -> author::ActiveModel {
     author::ActiveModel {
         ..Default::default()
     }
@@ -99,7 +99,7 @@ fn get_default_author() -> author::ActiveModel {
     search_fields = [Id, Name],
     ordering = [(Id, Desc)],
     format = format_author,
-    default_value = get_default_author
+    initial_value = get_initial_author
 )]
 struct AuthorAdmin;
 ```
@@ -150,8 +150,8 @@ list of Columns. These fields are used when searching in list view.
 list of (Column, Asc | Desc). used in list view.
 - `format`
 identity for Model -> String function. used in auto_complete
-- `default_value`
-identity for the function returns AtctiveModel. used when creating.
+- `initial_value`
+identity for the function returns AtctiveModel. used when creating, and some times called for create form.
 
 ## null handling when set empty string in the form
 | nullable | field | db-value |
