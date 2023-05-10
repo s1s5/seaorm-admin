@@ -67,7 +67,7 @@
       e.classList.remove("d-none");
     }
 
-    function register_submit_callback(button_id, reirect_url_on_success) {
+    function register_submit_callback(button_id, redirect_url_on_success) {
       document.getElementById(button_id).addEventListener("click", function (event) {
         event.preventDefault();
 
@@ -92,7 +92,11 @@
           }
         })
         .then(function (data) {
-          window.location.href = reirect_url_on_success;
+          if (typeof redirect_url_on_success === "function") {
+            window.location.href = redirect_url_on_success(data);
+          } else {
+            window.location.href = redirect_url_on_success;
+          }
         })
         .catch(function (error) {
           var myDiv = document.getElementById("form-alert");

@@ -2,6 +2,7 @@
 
 {% block form_buttons %}
 <div class="d-flex justify-content-end">
+<button id="{{ form_id }}-submit-cont" type="button" class="btn btn-primary me-4">Create and continue editing</button>
     <button id="{{ form_id }}-submit" type="button" class="btn btn-primary">create</button>
 </div>
 {% endblock %}
@@ -9,6 +10,9 @@
 {% block scripts %}
 {% call super() %}
 <script>
+    register_submit_callback("{{ form_id }}-submit-cont", function(data) {
+        return `{{ site.sub_path }}/{{ model_name }}/update/${data.key}/`;
+    });
     register_submit_callback("{{ form_id }}-submit", "../");
 </script>
 {% endblock%}

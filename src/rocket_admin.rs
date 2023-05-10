@@ -1,4 +1,4 @@
-use super::{json_overwrite_key, templates, Admin};
+use super::{json_overwrite_key, templates, Admin, Json, ModelAdminTrait};
 use askama::Template;
 use rocket::request::Request;
 use rocket::response::Responder;
@@ -62,6 +62,38 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for HtmlOrJson {
             HtmlOrJson::Json(j) => j.respond_to(req),
             HtmlOrJson::Html(h) => h.respond_to(req),
         }
+    }
+}
+
+fn return_json_object(
+    model: &Box<dyn ModelAdminTrait + Send + Sync>,
+    r: super::Result<Json>,
+) -> (Status, content::RawJson<String>) {
+    match r {
+        Ok(data) => (
+            Status::Ok,
+            content::RawJson::<String>(
+                serde_json::to_string(&json!({
+                    "status": "ok",
+                    // TODO: ErrのときInternalServerErrorにしないと、、
+                    "key": serde_json::Value::String(model.json_to_key(&data).unwrap()),
+                    "label": serde_json::Value::String(model.to_str(&data).unwrap()),
+                    "data": data,
+
+                }))
+                .unwrap(),
+            ),
+        ),
+        Err(error) => (
+            Status::InternalServerError,
+            content::RawJson::<String>(
+                serde_json::to_string(&json!({
+                    "status": "failed",
+                    "error": format!("{}", error)
+                }))
+                .unwrap(),
+            ),
+        ),
     }
 }
 
@@ -144,7 +176,8 @@ pub async fn create_model<'r>(
 ) -> Result<(Status, content::RawJson<String>), Status> {
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
-    Ok(return_json(
+    Ok(return_json_object(
+        model,
         model.insert(&admin.get_connection(), data).await,
     ))
 }
@@ -182,7 +215,8 @@ pub async fn update_model(
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let data = json_overwrite_key(&data, &key).map_err(|_x| Status::InternalServerError)?;
-    Ok(return_json(
+    Ok(return_json_object(
+        model,
         model.update(&admin.get_connection(), data).await,
     ))
 }
