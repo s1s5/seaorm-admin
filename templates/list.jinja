@@ -1,7 +1,10 @@
 {% extends "base.jinja" %}
 
-{% block content %}
+{% block head %}
 
+{% endblock %}
+
+{% block content %}
 <div class="row">
   <div class="col-12 col-sm-4 col-md-3 col-xl-2">
     <div class="p-4">
@@ -37,7 +40,7 @@
       <hr />
       <div class="p-3">
         <div class="overflow-auto">
-        <table class="table">
+        <table class="table table-hover">
           <thead>
             <tr>
               {% for key in keys%}
@@ -47,7 +50,7 @@
           </thead>
           <tbody>
             {% for row in rows %}
-            <tr>
+            <tr class="clickable-row" data-href="{{ row.0 }}" style="cursor: pointer;">
               {% for col in row.1 %}
               {% if loop.first %}
               <th scope="row"><a href="{{ row.0 }}">{{ col }}</a></th>
@@ -65,4 +68,16 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+ window.addEventListener('load', function() {
+  document.querySelectorAll('.clickable-row').forEach(function(e) {
+    let url = e.attributes["data-href"].value;
+    e.addEventListener("click", function() { window.location.href = url; });
+  });
+})
+</script>
 {% endblock %}
