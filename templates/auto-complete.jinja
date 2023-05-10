@@ -10,6 +10,7 @@
   {% for col in cols %}
     data-{{ loop.index0 }}-to="{{ col.to_col}}" data-{{ loop.index0 }}-from="{{ col.from_col}}"
   {% endfor %}
+  {% if nullable %}data-nullable="true"{% endif %}
   >
   {% if let Some(choice) = choice %}<option value="{{ choice.value }}" selected>{{ choice.label }}</option>{% endif %}
 </select>

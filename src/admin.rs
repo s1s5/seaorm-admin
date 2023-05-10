@@ -167,12 +167,15 @@ impl Admin {
             .flat_map(|x| identity_to_vec_string(&x.from_col))
             .collect();
 
-        let field_names: HashSet<_> = base_fields.iter().map(|x| x.name.clone()).collect();
+        let field_map: HashMap<String, AdminField> = base_fields
+            .iter()
+            .map(|x| (x.name.clone(), x.clone()))
+            .collect();
 
         let auto_complete_fields: Vec<_> = auto_complete
             .iter()
             .zip(relations.into_iter())
-            .filter(|x| field_names.contains(&x.0.from_col.to_string()))
+            .filter(|x| field_map.contains_key(&x.0.from_col.to_string()))
             .map(|(x, rel)| {
                 Ok(Box::new(templates::AdminFormAutoComplete {
                     name: relation_def_to_form_name(&x)?,
@@ -182,6 +185,7 @@ impl Admin {
                     disabled: false,
                     to_table: extract_table_name(&x.to_tbl)?,
                     cols: extract_cols_from_relation_def(&x)?,
+                    nullable: field_map.get(&x.from_col.to_string()).unwrap().nullable,
                 }) as Box<dyn templates::DynTemplate>)
             })
             .filter(|x| x.is_ok())

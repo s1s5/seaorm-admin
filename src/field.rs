@@ -8,6 +8,7 @@ pub struct AdminField {
     pub hidden: bool,
     pub required: bool,
     pub help_text: Option<String>,
+    pub nullable: bool,
 }
 
 impl AdminField {
@@ -22,6 +23,7 @@ impl AdminField {
             hidden: false,
             required: false,
             help_text: None,
+            nullable: column.def().is_null(),
         }
     }
 }

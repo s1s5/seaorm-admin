@@ -82,6 +82,7 @@ pub struct AdminFormAutoComplete {
     pub disabled: bool,
     pub to_table: String,
     pub cols: Vec<AdminFormAutoCompleteCol>,
+    pub nullable: bool,
 }
 
 #[derive(Template)]
