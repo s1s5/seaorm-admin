@@ -26,7 +26,7 @@ where
 
 // ----------------------------------------------------------------------------
 pub fn to_json<M>(
-    model: M,
+    model: &M,
     columns: &Vec<<<M as ModelTrait>::Entity as EntityTrait>::Column>,
 ) -> Result<Json>
 where

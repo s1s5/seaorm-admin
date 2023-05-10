@@ -1,6 +1,13 @@
-use syn::{Expr, ExprPath, Ident, MetaNameValue};
+use proc_macro2::Span;
+use syn::{Expr, ExprLit, ExprPath, Ident, Lit, MetaNameValue};
 
 type Result<T> = std::result::Result<T, syn::Error>;
+
+#[derive(Debug, Clone)]
+pub enum IdentOrLiteral {
+    Path(ExprPath),
+    Literal(ExprLit),
+}
 
 fn parse_path_ident<'a>(
     ident: &'a Ident,
@@ -30,6 +37,22 @@ fn parse_expr_path<'a>(
     }
 }
 
+fn parse_ident_or_literal(expr: &Expr, span: Span, error_message: &str) -> Result<IdentOrLiteral> {
+    match expr {
+        Expr::Path(p) => {
+            if p.path.segments.len() != 1 {
+                return Err(syn::Error::new(span.clone(), error_message));
+            }
+            Ok(IdentOrLiteral::Path(p.clone()))
+        }
+        Expr::Lit(l) => match &l.lit {
+            Lit::Str(_s) => Ok(IdentOrLiteral::Literal(l.clone())),
+            _ => Err(syn::Error::new(span.clone(), error_message)),
+        },
+        _ => Err(syn::Error::new(span.clone(), error_message)),
+    }
+}
+
 fn parse_list_expr(ident: &Ident, nv: &MetaNameValue, error_message: &str) -> Result<Vec<Expr>> {
     match &nv.value {
         syn::Expr::Array(a) => Ok(a.elems.iter().cloned().collect::<Vec<_>>()),
@@ -41,8 +64,22 @@ pub fn parse_module<'a>(ident: &'a Ident, nv: &'a MetaNameValue) -> Result<&'a E
     parse_expr_path(ident, nv, "module must be ident")
 }
 
-pub fn parse_list_display(ident: &Ident, nv: &MetaNameValue) -> Result<Vec<Expr>> {
-    parse_list_expr(ident, nv, "list_display must be array")
+pub fn parse_list_display(ident: &Ident, nv: &MetaNameValue) -> Result<Vec<IdentOrLiteral>> {
+    // parse_list_expr(ident, nv, "list_display must be array")
+    match &nv.value {
+        syn::Expr::Array(a) => a
+            .elems
+            .iter()
+            .map(|e| {
+                parse_ident_or_literal(
+                    e,
+                    ident.span(),
+                    "list_display element must be Column or string literal",
+                )
+            })
+            .collect::<Result<Vec<_>>>(),
+        _ => Err(syn::Error::new(ident.span(), "list_display must be array")),
+    }
 }
 
 pub fn parse_form_fields(ident: &Ident, nv: &MetaNameValue) -> Result<Vec<Expr>> {

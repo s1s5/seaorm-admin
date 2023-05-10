@@ -1,15 +1,17 @@
 use proc_macro2::TokenStream;
+use quote::format_ident;
 use quote::quote;
-use syn::{punctuated::Punctuated, token::Comma, Attribute, ExprPath, Ident, Meta};
+use syn::{punctuated::Punctuated, token::Comma, Attribute, ExprPath, Ident, Lit, Meta};
 
 use crate::parse::parse_module;
+use crate::parse::IdentOrLiteral;
 
 type Result = std::result::Result<TokenStream, syn::Error>;
 
 pub struct ModelAdminExpander {
     module: ExprPath,
     ident: Ident,
-    list_display: Option<Vec<syn::Expr>>,
+    list_display: Option<Vec<IdentOrLiteral>>,
     form_fields: Option<Vec<syn::Expr>>,
     auto_complete: Option<Vec<syn::Expr>>,
     ordering: Option<Vec<(syn::Expr, syn::Expr)>>,
@@ -79,19 +81,31 @@ impl ModelAdminExpander {
         let ident = &self.ident;
         let module = &self.module;
         if let Some(list_display) = self.list_display.clone() {
+            let list_display: Vec<_> = list_display
+                .iter()
+                .map(|e| match e {
+                    IdentOrLiteral::Path(i) => {
+                        quote!(#module::Column::#i . to_string())
+                    }
+                    IdentOrLiteral::Literal(s) => {
+                        quote!(#s . to_string())
+                    }
+                })
+                .collect();
             Ok(quote! {
                 impl #ident {
-                    fn get_list_display() -> Vec<#module::Column> {
-                        vec![#(#module :: Column:: #list_display),*]
+                    fn get_list_display() -> Vec<String> {
+                        use seaorm_admin::sea_orm::Iden;
+                        vec![#(#list_display),*]
                     }
                 }
             })
         } else {
             Ok(quote! {
                 impl #ident {
-                    fn get_list_display() -> Vec<#module::Column> {
-                        use seaorm_admin::sea_orm::Iterable;
-                        #module :: Column::iter().collect()
+                    fn get_list_display() -> Vec<String> {
+                        use seaorm_admin::sea_orm::{Iden, Iterable};
+                        #module :: Column::iter().map(|x| x.to_string()).collect()
                     }
                 }
             })
@@ -300,9 +314,7 @@ impl ModelAdminExpander {
                 }
 
                 fn list_display(&self) -> Vec<String> {
-                    use seaorm_admin::Iden;
-
-                    #ident::get_list_display().iter().map(|x| x.to_string()).collect()
+                    #ident::get_list_display()
                 }
 
                 fn get_auto_complete(&self) -> Vec<seaorm_admin::sea_orm::RelationDef> {
@@ -371,6 +383,52 @@ impl ModelAdminExpander {
         }
     }
 
+    fn expand_to_json_for_list(&self) -> Result {
+        let ident = &self.ident;
+        let module = &self.module;
+        let extra_fields: Vec<_> = if let Some(list_display) = self.list_display.clone() {
+            list_display
+                .iter()
+                .map(|e| match e {
+                    IdentOrLiteral::Path(_i) => None,
+                    IdentOrLiteral::Literal(s) => {
+                        let id = match &s.lit {
+                            Lit::Str(s) => s.value(),
+                            _ => panic!("Unexpected ExprLit type found"),
+                        };
+                        let id = format_ident!("{}", id);
+                        Some(quote!(jv[#s] = #id(&x).into()))
+                    }
+                })
+                .filter(|x| x.is_some())
+                .map(|x| x.unwrap())
+                .collect()
+        } else {
+            vec![]
+        };
+
+        if extra_fields.is_empty() {
+            Ok(quote! {
+                impl #ident {
+                    #[inline]
+                    fn convert_to_json_for_list(x: #module::Model, fields: &Vec<#module :: Column>) -> seaorm_admin::Result<seaorm_admin::Json> {
+                        seaorm_admin::to_json(&x, &fields)
+                    }
+                }
+            })
+        } else {
+            Ok(quote! {
+                impl #ident {
+                    fn convert_to_json_for_list(x: #module::Model, fields: &Vec<#module :: Column>) -> seaorm_admin::Result<seaorm_admin::Json> {
+                        let mut jv = seaorm_admin::to_json(&x, &fields)?;
+                        #(#extra_fields);*;
+                        Ok(jv)
+                    }
+                }
+            })
+        }
+    }
+
     fn expand_list_impl(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
@@ -393,7 +451,7 @@ impl ModelAdminExpander {
                     .limit(query.limit)
                     .all(conn).await?
                     .into_iter()
-                    .map(|x| seaorm_admin::to_json(x, &fields))
+                    .map(|x| #ident::convert_to_json_for_list(x, &fields))
                     .collect::<seaorm_admin::Result<Vec<_>>>()
                     .map(|x| (count, x))
             }
@@ -421,7 +479,7 @@ impl ModelAdminExpander {
                     seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
                 };
                 Ok(if let Some(model) = qs.one(conn).await? {
-                    Some(seaorm_admin::to_json(model, &fields)?)
+                    Some(seaorm_admin::to_json(&model, &fields)?)
                 } else {
                     None
                 })
@@ -446,7 +504,7 @@ impl ModelAdminExpander {
                     let mut model = #ident::get_default_value();
                     seaorm_admin::set_from_json(&mut model, &fields, &value)?;
                     let saved: #module::Model = model.insert(conn).await?.try_into_model()?;
-                    seaorm_admin::to_json(saved, &fields)
+                    seaorm_admin::to_json(&saved, &fields)
                 }
             }
         ))
@@ -468,7 +526,7 @@ impl ModelAdminExpander {
                     let mut model = #module::ActiveModel { ..Default::default() };
                     seaorm_admin::set_from_json(&mut model, &fields, &value)?;
                     let saved: #module::Model = model.save(conn).await?.try_into_model().unwrap();
-                    seaorm_admin::to_json(saved, &fields)
+                    seaorm_admin::to_json(&saved, &fields)
                 }
             }
         ))
@@ -517,6 +575,7 @@ impl ModelAdminExpander {
             self.expand_get_default_value()?,
             self.expand_impl()?,
             self.expand_to_str_impl()?,
+            self.expand_to_json_for_list()?,
             self.expand_list_impl()?,
             self.expand_get_impl()?,
             self.expand_insert_impl()?,
