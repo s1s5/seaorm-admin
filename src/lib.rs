@@ -34,6 +34,7 @@ pub type Json = serde_json::Value;
 pub struct ListQuery {
     pub filter: HashMap<String, Vec<String>>,
     pub queries: Vec<String>,
+    pub ordering: Vec<(String, sea_orm::Order)>,
     pub offset: u64,
     pub limit: u64,
 }

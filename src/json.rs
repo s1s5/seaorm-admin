@@ -514,7 +514,7 @@ mod tests {
             .try_into_model()
             .expect("failed to convert ActiveModel to Model.");
 
-        let jv: Json = to_json(a.clone(), &fields).expect("failed to serialize to json");
+        let jv: Json = to_json(&a, &fields).expect("failed to serialize to json");
 
         assert!(jv.is_object());
         let o = jv.as_object().unwrap();

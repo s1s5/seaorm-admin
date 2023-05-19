@@ -22,6 +22,26 @@ pub fn parse_query(m: &HashMap<String, Vec<String>>, list_per_page: u64) -> Resu
         .filter(|x| x.len() > 0)
         .collect();
 
+    let ordering: Vec<_> = m
+        .get("_o")
+        .map(|x| {
+            x.iter()
+                .flat_map(|s| s.trim().split(','))
+                .map(|s| s.to_string())
+                .collect()
+        })
+        .unwrap_or(vec![])
+        .into_iter()
+        .filter(|x| x.len() > 0)
+        .map(|x| {
+            if x.starts_with("-") {
+                ((&x[1..]).to_string(), sea_orm::Order::Desc)
+            } else {
+                (x, sea_orm::Order::Asc)
+            }
+        })
+        .collect();
+
     let page = m
         .get("_p")
         .filter(|x| x.len() == 1)
@@ -32,6 +52,7 @@ pub fn parse_query(m: &HashMap<String, Vec<String>>, list_per_page: u64) -> Resu
     Ok(ListQuery {
         filter,
         queries,
+        ordering,
         offset: page * list_per_page,
         limit: list_per_page,
     })
@@ -50,6 +71,10 @@ mod tests {
                     "_q".to_string(),
                     vec!["search_word0".to_string(), "search_word1".to_string()],
                 ),
+                (
+                    "_o".to_string(),
+                    vec!["id".to_string(), "-name".to_string(), "a,b".to_string()],
+                ),
                 ("_p".to_string(), vec!["2".to_string()]),
             ]),
             20,
@@ -62,6 +87,15 @@ mod tests {
         assert_eq!(
             query.queries,
             vec!["search_word0".to_string(), "search_word1".to_string()]
+        );
+        assert_eq!(
+            query.ordering,
+            vec![
+                ("id".to_string(), sea_orm::Order::Asc),
+                ("name".to_string(), sea_orm::Order::Desc),
+                ("a".to_string(), sea_orm::Order::Asc),
+                ("b".to_string(), sea_orm::Order::Asc),
+            ]
         );
         assert_eq!(query.offset, 40);
         assert_eq!(query.limit, 20);

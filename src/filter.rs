@@ -36,6 +36,23 @@ where
     Ok(qs)
 }
 
+pub fn set_ordering_from_query<E>(
+    qs: Select<E>,
+    ordering: &Vec<(String, sea_orm::Order)>,
+    columns: &Vec<<E as EntityTrait>::Column>,
+) -> Result<Select<E>>
+where
+    E: EntityTrait,
+{
+    let m: HashMap<_, _> = columns.iter().map(|x| (x.to_string(), x)).collect();
+    let ordering: Vec<_> = ordering
+        .iter()
+        .filter(|x| m.contains_key(&x.0))
+        .map(|x| (m[&x.0].clone(), x.1.clone()))
+        .collect();
+    set_ordering(qs, &ordering)
+}
+
 pub fn filter_by_hash_map<E>(
     qs: Select<E>,
     columns: &Vec<<E as EntityTrait>::Column>,

@@ -448,7 +448,11 @@ impl ModelAdminExpander {
 
                 let fields = #ident::get_fields();
                 let qs = #module::Entity::find();
-                let qs = seaorm_admin::set_ordering(qs, &#ident::get_ordering())?;
+                let qs = if query.ordering.len() > 0 {
+                    seaorm_admin::set_ordering_from_query(qs, &query.ordering, &#ident::get_fields())?
+                } else {
+                    seaorm_admin::set_ordering(qs, &#ident::get_ordering())?
+                };
                 let qs = seaorm_admin::filter_by_hash_map(qs, &fields, &query.filter)?;
                 let qs = seaorm_admin::search_by_queries(qs, &#ident::get_search_fields(), &query.queries)?;
                 let count = qs.clone().count(conn).await?;
