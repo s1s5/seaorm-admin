@@ -207,25 +207,33 @@ pub fn create_form_field(field: &AdminField, value: Option<&Json>) -> Result<Box
         sea_orm::ColumnType::DateTime | sea_orm::ColumnType::TimestampWithTimeZone => {
             let value = if let Some(value) = &value {
                 if field.column_type == sea_orm::ColumnType::DateTime {
-                    let v: chrono::NaiveDateTime =
-                        serde_json::from_value(Json::String(value.clone()))?;
-                    Some(AdminFormDatetimeInputValue {
-                        raw: value.clone(),
-                        datetime_without_seconds: v.format("%Y-%m-%dT%H:%M").to_string(),
-                        seconds: v.time().second() as f64
-                            + (v.timestamp_subsec_micros() as f64) * 1.0e-6,
-                        timezone: 0,
-                    })
+                    let v: Option<chrono::NaiveDateTime> =
+                        serde_json::from_value(Json::String(value.clone())).ok();
+                    if let Some(v) = v {
+                        Some(AdminFormDatetimeInputValue {
+                            raw: value.clone(),
+                            datetime_without_seconds: v.format("%Y-%m-%dT%H:%M").to_string(),
+                            seconds: v.time().second() as f64
+                                + (v.timestamp_subsec_micros() as f64) * 1.0e-6,
+                            timezone: 0,
+                        })
+                    } else {
+                        None
+                    }
                 } else {
-                    let v: chrono::DateTime<chrono::FixedOffset> =
-                        serde_json::from_value(Json::String(value.clone()))?;
-                    Some(AdminFormDatetimeInputValue {
-                        raw: value.clone(),
-                        datetime_without_seconds: v.format("%Y-%m-%dT%H:%M").to_string(),
-                        seconds: v.time().second() as f64
-                            + (v.timestamp_subsec_micros() as f64) * 1.0e-6,
-                        timezone: v.timezone().local_minus_utc() * 60,
-                    })
+                    let v: Option<chrono::DateTime<chrono::FixedOffset>> =
+                        serde_json::from_value(Json::String(value.clone())).ok();
+                    if let Some(v) = v {
+                        Some(AdminFormDatetimeInputValue {
+                            raw: value.clone(),
+                            datetime_without_seconds: v.format("%Y-%m-%dT%H:%M").to_string(),
+                            seconds: v.time().second() as f64
+                                + (v.timestamp_subsec_micros() as f64) * 1.0e-6,
+                            timezone: v.timezone().local_minus_utc() * 60,
+                        })
+                    } else {
+                        None
+                    }
                 }
             } else {
                 None

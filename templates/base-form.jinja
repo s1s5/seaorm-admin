@@ -33,9 +33,9 @@
       </form>
     </div>
   </div>
-  {% endblock %}
+{% endblock %}
 
-  {% block scripts %}
+{% block scripts %}
   <script>
     function extract_form(form_id) {
       var form = document.getElementById(form_id);
@@ -111,6 +111,22 @@
       });
     }
   </script>
+
+  <script>
+    window.addEventListener('load', (event) => {
+      document.querySelectorAll('.clear-input-button').forEach(function(e) {
+        e.addEventListener("click", function() {
+          let ids = e.attributes["data-target"].value.split(",").filter(e => !!e);
+          ids.forEach(function(id) {
+            document.querySelectorAll("#" + id).forEach(function(e) {
+              e.value = "";
+            });
+          });
+        });
+      });
+    });
+  </script>
+
   <script>
     // Converts seconds to a string in the format "+hh:mm" or "-hh:mm"
     function secondsToTimeString(seconds) {
