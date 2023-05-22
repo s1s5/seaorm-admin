@@ -1,3 +1,5 @@
+use crate::{DefaultWidget, Widget};
+
 use super::{templates, AdminField, CustomError, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
 use itertools::Itertools;
@@ -152,7 +154,7 @@ impl Admin {
 
     fn get_form_fields(
         &self,
-        base_fields: &Vec<AdminField>,
+        base_fields: &Vec<(AdminField, Box<dyn Widget>)>,
         auto_complete: &Vec<sea_orm::RelationDef>,
         row: Option<&Json>,
         relations: Option<Vec<Option<templates::AdminFormAutoCompleteChoice>>>,
@@ -169,7 +171,7 @@ impl Admin {
 
         let field_map: HashMap<String, AdminField> = base_fields
             .iter()
-            .map(|x| (x.name.clone(), x.clone()))
+            .map(|(x, _)| (x.name.clone(), x.clone()))
             .collect();
 
         let auto_complete_fields: Vec<_> = auto_complete
@@ -194,7 +196,7 @@ impl Admin {
 
         Ok(base_fields
             .iter()
-            .map(|x| {
+            .map(|(x, w)| {
                 let value = if let Some(row) = row {
                     row.get(&x.name)
                 } else {
@@ -211,7 +213,7 @@ impl Admin {
                         attributes: HashMap::new(),
                     }) as Box<dyn templates::DynTemplate>)
                 } else {
-                    templates::create_form_field(x, value).ok()
+                    w.create(x, value).ok()
                 }
             })
             .filter(|x| x.is_some())
@@ -396,12 +398,12 @@ impl Admin {
             fields: model
                 .get_update_form_fields()
                 .iter()
-                .map(|x| {
+                .map(|(x, _)| {
                     let mut x = x.clone();
                     x.editable = false;
                     x
                 })
-                .map(|x| templates::create_form_field(&x, row.get(&x.name)).ok())
+                .map(|x| DefaultWidget {}.create(&x, row.get(&x.name)).ok())
                 .filter(|x| x.is_some())
                 .map(|x| x.unwrap())
                 .collect(),

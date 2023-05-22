@@ -1,7 +1,7 @@
 use entity::{author, post, test_model};
 use sea_orm::Set;
 use seaorm_admin::rocket_admin::get_admin_routes;
-use seaorm_admin::{Admin, ModelAdmin};
+use seaorm_admin::{Admin, EnumWidget, ModelAdmin};
 use std::sync::Arc;
 
 fn format_author(model: &author::Model) -> String {
@@ -24,7 +24,7 @@ fn get_initial_author() -> author::ActiveModel {
     search_fields = [Id, Name],
     ordering = [(Id, Desc)],
     format = format_author,
-    initial_value = get_initial_author
+    initial_value = get_initial_author,
 )]
 struct AuthorAdmin;
 
@@ -33,7 +33,12 @@ struct AuthorAdmin;
 struct PostAdmin;
 
 #[derive(ModelAdmin, Default)]
-#[model_admin(module = test_model)]
+#[model_admin(module = test_model,
+    widgets = [
+        (EnumString, EnumWidget::from_enum(test_model::Category::iter())),
+        (EnumI32, EnumWidget::from_enum(test_model::Color::iter())),
+    ],
+)]
 struct TestAdmin;
 
 #[tokio::main]

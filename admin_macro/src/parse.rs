@@ -127,3 +127,29 @@ pub fn parse_ordering(ident: &Ident, nv: &MetaNameValue) -> Result<Vec<(Expr, Ex
         _ => Err(syn::Error::new(ident.span(), "ordering must be array")),
     }
 }
+
+pub fn parse_widgets(ident: &Ident, nv: &MetaNameValue) -> Result<Vec<(Expr, Expr)>> {
+    match &nv.value {
+        syn::Expr::Array(a) => a
+            .elems
+            .iter()
+            .map(|x| match x {
+                syn::Expr::Tuple(t) => {
+                    if t.elems.len() == 2 {
+                        Ok((t.elems[0].clone(), t.elems[1].clone()))
+                    } else {
+                        Err(syn::Error::new(
+                            ident.span(),
+                            "widgets must be array. [(Column, Widget), ..], each element must be two elements.",
+                        ))
+                    }
+                }
+                _ => Err(syn::Error::new(
+                    ident.span(),
+                    "widgets must be array. [(Column, Widget), ..], each element must be tuple.",
+                )),
+            })
+            .collect::<Result<Vec<_>>>(),
+        _ => Err(syn::Error::new(ident.span(), "widgets must be array. [(Column, Widget), ..]")),
+    }
+}

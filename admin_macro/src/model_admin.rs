@@ -18,6 +18,7 @@ pub struct ModelAdminExpander {
     search_fields: Option<Vec<syn::Expr>>,
     format: Option<Ident>,
     initial_value: Option<Ident>,
+    widgets: Option<Vec<(syn::Expr, syn::Expr)>>,
 }
 
 impl ModelAdminExpander {
@@ -30,6 +31,7 @@ impl ModelAdminExpander {
         let mut search_fields = None;
         let mut format = None;
         let mut initial_value = None;
+        let mut widgets = None;
 
         attrs.iter().try_for_each(|attr| {
             if let Ok(list) = attr.parse_args_with(Punctuated::<Meta, Comma>::parse_terminated) {
@@ -55,6 +57,8 @@ impl ModelAdminExpander {
                             } else if ident == "initial_value" {
                                 initial_value =
                                     Some(super::parse::parse_initial_value(ident, nv)?.clone());
+                            } else if ident == "widgets" {
+                                widgets = Some(super::parse::parse_widgets(ident, nv)?.clone());
                             }
                         }
                     }
@@ -74,6 +78,7 @@ impl ModelAdminExpander {
             search_fields,
             format,
             initial_value,
+            widgets,
         })
     }
 
@@ -294,28 +299,12 @@ impl ModelAdminExpander {
                     seaorm_admin::from_key_string(&#ident::get_keys(), key)
                 }
 
-                fn get_create_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
-                    use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait};
-
-                    // primary keyは隠す
-                    let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
-                    let model = #ident::get_initial_value();
-
-                    #ident::get_form_fields().into_iter().filter(
-                        |x| !keys.contains(&x.to_string())).filter(
-                            |x| !model.get(*x).is_set()
-                        ).map(
-                            |x| seaorm_admin::AdminField::create_from(&x, true)).collect()
+                fn get_create_form_fields(&self) -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
+                    #ident::get_create_form_fields_impl()
                 }
 
-                fn get_update_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
-                    use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
-
-                    let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
-                    #ident::get_form_fields()
-                        .into_iter()
-                        .map(|x| seaorm_admin::AdminField::create_from(&x, !keys.contains(&x.to_string())))
-                        .collect()
+                fn get_update_form_fields(&self) -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
+                    #ident::get_update_form_fields_impl()
                 }
 
                 fn list_display(&self) -> Vec<String> {
@@ -432,6 +421,65 @@ impl ModelAdminExpander {
                 }
             })
         }
+    }
+
+    fn expand_create_form_fields_impl(&self) -> Result {
+        let ident = &self.ident;
+        let module = &self.module;
+        let widgets = self.widgets.clone().unwrap_or(vec![]);
+        let (columns, widgets): (Vec<syn::Expr>, Vec<syn::Expr>) = widgets.into_iter().unzip();
+
+        Ok(quote!(
+        impl #ident {
+            fn get_create_form_fields_impl() -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
+                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait};
+
+                // primary keyは隠す
+                let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
+                let model = #ident::get_initial_value();
+                let mut widgets: std::collections::HashMap<String, Box<dyn seaorm_admin::Widget>> = vec![#((#module :: Column:: #columns.to_string(), Box::new(#widgets) as Box<dyn seaorm_admin::Widget>)),*].into_iter().collect();
+
+                #ident::get_form_fields().into_iter().filter(
+                    |x| !keys.contains(&x.to_string())).filter(
+                        |x| !model.get(*x).is_set()
+                    ).map(|x| {
+                        let a = seaorm_admin::AdminField::create_from(&x, true);
+                        if let Some(w) = widgets.remove(&x.to_string()) {
+                            (a, w)
+                        } else {
+                            (a, Box::new(seaorm_admin::DefaultWidget{}) as Box<dyn seaorm_admin::Widget>)
+                        }
+                    }).collect()
+            }
+        }))
+    }
+
+    fn expand_update_form_fields_impl(&self) -> Result {
+        let ident = &self.ident;
+        let module = &self.module;
+        let widgets = self.widgets.clone().unwrap_or(vec![]);
+        let (columns, widgets): (Vec<syn::Expr>, Vec<syn::Expr>) = widgets.into_iter().unzip();
+
+        Ok(quote!(
+        impl #ident {
+            fn get_update_form_fields_impl() -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
+                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
+
+                let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
+                let mut widgets: std::collections::HashMap<String, Box<dyn seaorm_admin::Widget>> = vec![#((#module :: Column:: #columns.to_string(), Box::new(#widgets) as Box<dyn seaorm_admin::Widget>)),*].into_iter().collect();
+
+                #ident::get_form_fields()
+                    .into_iter()
+                    .map(|x| {
+                        let a = seaorm_admin::AdminField::create_from(&x, !keys.contains(&x.to_string()));
+                        if let Some(w) = widgets.remove(&x.to_string()) {
+                            (a, w)
+                        } else {
+                            (a, Box::new(seaorm_admin::DefaultWidget{}) as Box<dyn seaorm_admin::Widget>)
+                        }
+                    }).collect()
+            }
+        }))
     }
 
     fn expand_list_impl(&self) -> Result {
@@ -585,6 +633,8 @@ impl ModelAdminExpander {
             self.expand_impl()?,
             self.expand_to_str_impl()?,
             self.expand_to_json_for_list()?,
+            self.expand_create_form_fields_impl()?,
+            self.expand_update_form_fields_impl()?,
             self.expand_list_impl()?,
             self.expand_get_impl()?,
             self.expand_insert_impl()?,

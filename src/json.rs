@@ -17,6 +17,7 @@ where
         .iter()
         .map(|col| {
             if let Some(v) = src.get(col.to_string()) {
+                println!("col:{:?}, value:{:?}", col, sanitize_value(col, v));
                 target.set(*col, sanitize_value(col, v)?);
             }
             Ok(())

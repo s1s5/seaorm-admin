@@ -16,6 +16,7 @@ pub mod rocket_admin;
 pub mod templates;
 #[cfg(test)]
 mod tests;
+mod widgets;
 
 pub use admin::*;
 pub use admin_macro::ModelAdmin;
@@ -25,6 +26,7 @@ pub use filter::*;
 pub use json::*;
 pub use key::*;
 pub use parse::*;
+pub use widgets::*;
 
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -54,9 +56,9 @@ pub trait ModelAdminTrait {
 
     fn get_auto_complete(&self) -> Vec<RelationDef>;
 
-    fn get_create_form_fields(&self) -> Vec<AdminField>;
+    fn get_create_form_fields(&self) -> Vec<(AdminField, Box<dyn Widget>)>;
 
-    fn get_update_form_fields(&self) -> Vec<AdminField>;
+    fn get_update_form_fields(&self) -> Vec<(AdminField, Box<dyn Widget>)>;
 
     async fn list(&self, conn: &DatabaseConnection, query: &ListQuery) -> Result<(u64, Vec<Json>)>;
 

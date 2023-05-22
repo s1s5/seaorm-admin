@@ -44,6 +44,18 @@ pub struct AdminFormCheckbox {
     pub disabled: bool,
 }
 
+#[derive(Template)]
+#[template(path = "select.jinja")]
+pub struct AdminFormSelect {
+    pub name: String,
+    pub label: String,
+    pub value: String,
+    pub help_text: Option<String>,
+    pub disabled: bool,
+    pub choices: Vec<(String, String)>,
+    pub attributes: HashMap<String, String>,
+}
+
 pub struct AdminFormDatetimeInputValue {
     pub raw: String,
     pub datetime_without_seconds: String,

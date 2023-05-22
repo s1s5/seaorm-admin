@@ -19,6 +19,12 @@ function extract_form(form_id) {
     data[textarea.name] = textarea.value;
   }
 
+  var selects = form.getElementsByTagName("select");
+  for (var i = 0; i < selects.length; i++) {
+    let s = selects[i];
+    data[s.name] = s.value;
+  }
+
   return data;
 }
 
