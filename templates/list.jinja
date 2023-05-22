@@ -21,12 +21,15 @@
       </nav>
       <div class="row p-3">
         <div class="col-12 col-sm-9 mb-2 mb-sm-0">
-          <form class="me-3 row" action="?foo=bar">
+          <form class="me-3 row" action="">
             {% for (key, values) in query.filter %}
               {% for value in values %}
                 <input type="hidden" name="{{ key }}" value="{{ value }}"/>
               {% endfor %}
             {% endfor %}
+            {% if query.ordering.len() > 0 %}
+              <input type="hidden" name="_o" value="{% for (k, o) in query.ordering %}{% if sea_orm::Order::Desc.eq(o) %}-{%endif%}{{ k }}{% endfor %}"/>
+            {% endif %}
             <div class="col-9"><input class="form-control" name="_q" value="{% for q in query.queries %}{{ q }} {% endfor %}"/></div>
             <div class="col-3"><button class="col-auto btn btn-primary" type="submit">search</button></div>
           </form>
