@@ -2,7 +2,7 @@
 # A separate workspace
 
 [package]
-name = "seaorm-admin-rocket"
+name = "seaorm-admin-axum"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,11 +10,14 @@ edition = "2021"
 
 [dependencies]
 entity = { path = "../entity" }
-seaorm-admin = { path="../../", features=["default", "with-rocket"] }
-
-rocket = { version = "=0.5.0-rc.3" }
+seaorm-admin = { path="../../", features=["default", "with-axum"] }
+axum = { version = "0" }
 tokio = { version = "^1", features = ["macros", "rt-multi-thread", "io-util"] }
 env_logger = "0.10.0"
+hyper = "*"
+
+serde = {version = "*", features = ["derive"]}
+serde_json ="*"
 
 [dependencies.sea-orm]
 version = "^0"

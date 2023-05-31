@@ -1,6 +1,7 @@
 use super::{AdminField, CustomError, Json, Result};
 use crate::{json_force_str, ListQuery};
 pub use askama::{DynTemplate, Template};
+#[cfg(feature = "with-chrono")]
 use chrono::Timelike;
 use log::warn;
 use std::collections::HashMap;
@@ -210,12 +211,19 @@ pub fn create_form_field(field: &AdminField, value: Option<&Json>) -> Result<Box
         }
         sea_orm::ColumnType::Float
         | sea_orm::ColumnType::Double
-        | sea_orm::ColumnType::Decimal(_)
         | sea_orm::ColumnType::Money(_) => {
             input.r#type = "number".into();
             input.attributes = HashMap::from_iter([("step".into(), "auto".into())]);
             input
         }
+        #[cfg(feature = "with-rust_decimal")]
+        sea_orm::ColumnType::Decimal(_) => {
+            input.r#type = "number".into();
+            input.attributes = HashMap::from_iter([("step".into(), "auto".into())]);
+            input
+        }
+
+        #[cfg(feature = "with-chrono")]
         sea_orm::ColumnType::DateTime | sea_orm::ColumnType::TimestampWithTimeZone => {
             let value = if let Some(value) = &value {
                 if field.column_type == sea_orm::ColumnType::DateTime {
@@ -307,6 +315,7 @@ pub fn create_form_field(field: &AdminField, value: Option<&Json>) -> Result<Box
             disabled: !field.editable,
         }),
         //  => {}
+        #[cfg(feature = "with-uuid")]
         sea_orm::ColumnType::Uuid => {
             input.attributes = HashMap::from_iter([
                 (

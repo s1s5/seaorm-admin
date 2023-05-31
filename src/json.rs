@@ -1,6 +1,7 @@
 use crate::{CustomError, Error, Json, Result};
 use base64::Engine;
 use log::warn;
+#[cfg(feature = "with-rust_decimal")]
 use rust_decimal::Decimal;
 use sea_orm::{ActiveModelTrait, DeriveIden, EntityTrait, ModelTrait};
 
@@ -192,26 +193,31 @@ where
             sanitize_value_check_empty!(Double, col, v);
             sea_orm::Value::Double(Some(parse_value::<f64>(v)?))
         }
+        #[cfg(feature = "with-rust_decimal")]
         sea_orm::ColumnType::Decimal(_o) => {
             sanitize_value_check_empty!(Decimal, col, v);
             let v: Decimal = serde_json::from_value(v.clone())?;
             sea_orm::Value::Decimal(Some(Box::new(v)))
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::ColumnType::DateTime | sea_orm::ColumnType::Timestamp => {
             sanitize_value_check_empty!(ChronoDateTime, col, v);
             let v: chrono::NaiveDateTime = serde_json::from_value(v.clone())?;
             sea_orm::Value::ChronoDateTime(Some(Box::new(v)))
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::ColumnType::TimestampWithTimeZone => {
             sanitize_value_check_empty!(ChronoDateTimeWithTimeZone, col, v);
             let v: chrono::DateTime<chrono::FixedOffset> = serde_json::from_value(v.clone())?;
             sea_orm::Value::ChronoDateTimeWithTimeZone(Some(Box::new(v)))
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::ColumnType::Time => {
             sanitize_value_check_empty!(ChronoTime, col, v);
             let v: chrono::NaiveTime = serde_json::from_value(v.clone())?;
             sea_orm::Value::ChronoTime(Some(Box::new(v)))
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::ColumnType::Date => {
             sanitize_value_check_empty!(ChronoDate, col, v);
             let v: chrono::NaiveDate = serde_json::from_value(v.clone())?;
@@ -240,6 +246,7 @@ where
             let v: Json = serde_json::from_str(&v)?;
             sea_orm::Value::Json(Some(Box::new(v.clone())))
         }
+        #[cfg(feature = "with-uuid")]
         sea_orm::ColumnType::Uuid => {
             sanitize_value_check_empty!(Uuid, col, v);
             let v: uuid::Uuid = serde_json::from_value(v.clone())?;
@@ -316,29 +323,41 @@ fn to_json_value(value: sea_orm::Value) -> Result<Json> {
                 serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
             }
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::ChronoDate(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::ChronoTime(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::ChronoDateTime(v) => {
             serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::ChronoDateTimeUtc(v) => {
             serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::ChronoDateTimeLocal(v) => {
             serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::ChronoDateTimeWithTimeZone(v) => {
             serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::TimeDate(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::TimeTime(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::TimeDateTime(v) => {
             serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
         }
+        #[cfg(feature = "with-chrono")]
         sea_orm::Value::TimeDateTimeWithTimeZone(v) => {
             serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
         }
+        #[cfg(feature = "with-uuid")]
         sea_orm::Value::Uuid(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        #[cfg(feature = "with-rust_decimal")]
         sea_orm::Value::Decimal(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
         // sea_orm::Value::BigDecimal(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
         // sea_orm::Value::Array(ty, v) => {}

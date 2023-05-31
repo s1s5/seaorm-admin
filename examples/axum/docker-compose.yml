@@ -1,0 +1,28 @@
+version: '3.5'
+
+volumes:
+  db:
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+
+  axum:
+    image: s1s5/rust-dev
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/axum
+    volumes:
+      - ../../:/src
+    working_dir: /src/examples/axum
+
+  migration:
+    image: s1s5/rust-dev
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/axum
+    volumes:
+      - ../migration/:/usr/src

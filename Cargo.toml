@@ -12,35 +12,33 @@ async-trait = "0.1"
 itertools = "0.10"
 base-62 = "0.1"
 serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1", default-features = false, optional = true }
 admin_macro = { path = "./admin_macro" }
 tokio = { version = "^1", features = ["macros", "rt-multi-thread", "io-util"] }
+log = "0.4"
+base64 = "0"
+serde_json = { version = "1" }
 rocket = { version = "=0.5.0-rc.3", default-features = false, optional = true }
+axum = { version = "0.6", features = ["default", "headers"], optional = true}
 bigdecimal = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4.20", default-features = false, optional = true }
 rust_decimal = { version = "1", default-features = false, optional = true }
 time = { version = "0.3", default-features = false, optional = true }
 uuid = { version = "1", default-features = false, optional = true }
-log = "0.4"
-base64 = "0"
 
 
 [dependencies.sea-orm]
 version = "*"
-features = [  "sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "debug-print" ]
+features = [ "sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "debug-print", "with-json" ]
 
 [dev-dependencies]
-seaorm-admin = { path = ".", features = ["full", "tests-cfg"] }
+seaorm-admin = { path = ".", features = ["default", "tests-cfg", "with-rocket", "with-axum"] }
 
 [features]
-default = ["full"]
-full = ["with-json", "with-chrono", "with-rust_decimal", "with-bigdecimal", "with-uuid", "with-time", "with-rocket"]
-with-json = ["serde_json", "sea-orm/with-json"]
-with-chrono = ["chrono", "sea-orm/with-chrono"]
+default = ["with-chrono", "with-rust_decimal", "with-uuid"]
+with-chrono = ["chrono", "sea-orm/with-chrono", "sea-orm/with-time"]
 with-rust_decimal = ["rust_decimal", "sea-orm/with-rust_decimal"]
-with-bigdecimal = ["bigdecimal", "sea-orm/with-bigdecimal"]
 with-uuid = ["uuid", "sea-orm/with-uuid"]
-with-time = ["time", "sea-orm/with-time"]
 with-rocket = ["rocket"]
+with-axum = ["axum"]
 tests-cfg = []
 

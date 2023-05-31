@@ -6,12 +6,15 @@ pub use sea_orm::Iden; // なんで必要なのかわからん・・
 use sea_orm::{DatabaseConnection, RelationDef};
 
 mod admin;
+#[cfg(feature = "with-axum")]
+pub mod axum_admin;
 mod error;
 mod field;
 mod filter;
 mod json;
 mod key;
 mod parse;
+#[cfg(feature = "with-rocket")]
 pub mod rocket_admin;
 pub mod templates;
 #[cfg(test)]
