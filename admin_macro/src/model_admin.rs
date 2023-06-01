@@ -230,8 +230,8 @@ impl ModelAdminExpander {
             Ok(quote!(
                 impl #ident {
                     fn get_search_fields() -> Vec<#module :: Column> {
-                        use seaorm_admin::sea_orm::{Iterable, PrimaryKeyToColumn};
-                        #module :: PrimaryKey::iter().map(|x| x.into_column()).collect()
+                        use seaorm_admin::sea_orm::Iterable;
+                        #module::Column::iter().collect()
                     }
                 }
             ))

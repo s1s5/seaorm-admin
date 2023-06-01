@@ -1,4 +1,4 @@
-use axum::{extract::State, response::Html, routing::get, Router};
+use axum::Router;
 use entity::{author, post, test_model};
 use sea_orm::Set;
 use seaorm_admin::{Admin, EnumWidget, ModelAdmin};
@@ -58,15 +58,14 @@ async fn main() -> std::result::Result<(), hyper::Error> {
     admin.add_model(TestAdmin);
 
     let app = Router::new()
-        .nest(admin.sub_path(), seaorm_admin::axum_admin::get_router())
+        .nest(
+            &format!("{}/", admin.sub_path()),
+            seaorm_admin::axum_admin::get_router(),
+        )
         .with_state(Arc::new(admin));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
-}
-
-async fn handler() -> Html<&'static str> {
-    Html("<h1>Hello, World!</h1>")
 }

@@ -1,16 +1,16 @@
 use super::{json_overwrite_key, templates, Admin, ModelAdminTrait};
 use askama::Template;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{Html, IntoResponse, Json, Response},
     routing::get,
     Router, TypedHeader,
 };
-
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 
+// ----- HtmlOrJson -----
 #[derive(Debug, Clone)]
 enum HtmlOrJson {
     Json(Json<AnyData>),
@@ -26,6 +26,7 @@ impl IntoResponse for HtmlOrJson {
     }
 }
 
+// ----- RequestInfo -----
 #[derive(Debug, Clone)]
 pub struct RequestInfo {
     pub accept_html: bool,
@@ -34,9 +35,11 @@ pub struct RequestInfo {
     pub query: HashMap<String, Vec<String>>,
 }
 
+// ----- AnyData -----
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct AnyData(serde_json::Value);
 
+// ----- Accept -----
 enum RequestHeaderAccept {
     Json,
     Html,
@@ -64,11 +67,12 @@ impl axum::headers::Header for RequestHeaderAccept {
         }
     }
 
-    fn encode<E: Extend<axum::http::HeaderValue>>(&self, values: &mut E) {
+    fn encode<E: Extend<axum::http::HeaderValue>>(&self, _values: &mut E) {
         // never
     }
 }
 
+// ----- return json -----
 fn return_json_object(
     model: &Box<dyn ModelAdminTrait + Send + Sync>,
     r: super::Result<super::Json>,
@@ -111,6 +115,7 @@ fn return_json<T>(r: super::Result<T>) -> (StatusCode, Json<AnyData>) {
     }
 }
 
+// ----- routes -----
 async fn index(State(admin): State<Arc<Admin>>) -> Result<Html<String>, StatusCode> {
     let template =
         templates::AdminIndex::new(&admin.site).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -121,15 +126,13 @@ async fn list(
     Path(model): Path<String>,
     State(admin): State<Arc<Admin>>,
     TypedHeader(accept): TypedHeader<RequestHeaderAccept>,
-    // Query(query): Query<String>,
-    //     request_info: RequestInfo,
+    Query(query): Query<HashMap<String, String>>, // TODO: array not supported
 ) -> Result<HtmlOrJson, StatusCode> {
-    // println!("query = {}", query);
     let request_info = RequestInfo {
         accept_html: true,
         accept_json: false,
         path: "/".to_string(),
-        query: HashMap::new(),
+        query: query.into_iter().map(|(k, v)| (k, vec![v])).collect(),
     };
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     match accept {
@@ -138,10 +141,6 @@ async fn list(
                 .get_list_as_json(model, &request_info.query)
                 .await
                 .map_err(|_x: super::Error| StatusCode::INTERNAL_SERVER_ERROR)?;
-            // Ok(HtmlOrJson::Json(Json(
-            //     serde_json::to_string(&object_list)
-            //         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?,
-            // )))
             Ok(HtmlOrJson::Json(Json(AnyData(object_list))))
         }
         RequestHeaderAccept::Html => {
@@ -168,11 +167,9 @@ async fn get_create_template(
 
 async fn create_model<'r>(
     Path(model): Path<String>,
-    // data: &[u8],
     State(admin): State<Arc<Admin>>,
     Json(data): Json<AnyData>,
 ) -> Result<(StatusCode, Json<AnyData>), StatusCode> {
-    // let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     Ok(return_json_object(
         model,
@@ -182,8 +179,6 @@ async fn create_model<'r>(
 
 async fn get_update_template(
     Path((model, id)): Path<(String, String)>,
-    // Path(model): Path<String>,
-    // Path(id): Path<String>,
     State(admin): State<Arc<Admin>>,
 ) -> Result<Html<String>, StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
@@ -206,8 +201,6 @@ async fn get_update_template(
 
 async fn update_model(
     Path((model, id)): Path<(String, String)>,
-    //    Path(id): Path<String>,
-    // data: &[u8],
     State(admin): State<Arc<Admin>>,
     Json(data): Json<AnyData>,
 ) -> Result<(StatusCode, Json<AnyData>), StatusCode> {
@@ -215,7 +208,6 @@ async fn update_model(
     let key = model
         .key_to_json(&id)
         .map_err(|_x| StatusCode::BAD_REQUEST)?;
-    // let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let data = json_overwrite_key(&data.0, &key).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(return_json_object(
         model,
@@ -225,8 +217,6 @@ async fn update_model(
 
 async fn get_delete_template(
     Path((model, id)): Path<(String, String)>,
-    // Path(model): Path<String>,
-    // Path(id): Path<String>,
     State(admin): State<Arc<Admin>>,
 ) -> Result<Html<String>, StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
@@ -248,10 +238,7 @@ async fn get_delete_template(
 
 async fn delete_model(
     Path((model, id)): Path<(String, String)>,
-    // Path(model): Path<String>,
-    // Path(id): Path<String>,
     State(admin): State<Arc<Admin>>,
-    // body: BodyStream,
     Json(data): Json<AnyData>,
 ) -> Result<(StatusCode, Json<AnyData>), StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
@@ -259,16 +246,6 @@ async fn delete_model(
         .key_to_json(&id)
         .map_err(|_x| StatusCode::BAD_REQUEST)?;
 
-    // let body_with_io_error =
-    //     body.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err));
-    // let mut body_reader = StreamReader::new(body_with_io_error);
-    // let mut data: Vec<u8> = Vec::new();
-    // body_reader
-    //     .read_to_end(&mut data)
-    //     .await
-    //     .map_err(|e| StatusCode::BAD_REQUEST)?;
-
-    // let data: serde_json::Value = serde_json::from_slice(&data[..]).unwrap();
     let data = json_overwrite_key(&data.0, &key).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(return_json(
