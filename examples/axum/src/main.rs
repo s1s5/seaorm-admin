@@ -1,4 +1,4 @@
-use axum::Router;
+use axum::{extract::Extension, Router};
 use entity::{author, post, test_model};
 use sea_orm::Set;
 use seaorm_admin::{Admin, EnumWidget, ModelAdmin};
@@ -62,7 +62,7 @@ async fn main() -> std::result::Result<(), hyper::Error> {
             &format!("{}/", admin.sub_path()),
             seaorm_admin::axum_admin::get_router(),
         )
-        .with_state(Arc::new(admin));
+        .layer(Extension(Arc::new(admin)));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
     axum::Server::bind(&addr)

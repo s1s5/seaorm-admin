@@ -1,7 +1,7 @@
 use super::{json_overwrite_key, templates, Admin, ModelAdminTrait};
 use askama::Template;
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query},
     http::StatusCode,
     response::{Html, IntoResponse, Json, Response},
     routing::get,
@@ -116,7 +116,7 @@ fn return_json<T>(r: super::Result<T>) -> (StatusCode, Json<AnyData>) {
 }
 
 // ----- routes -----
-async fn index(State(admin): State<Arc<Admin>>) -> Result<Html<String>, StatusCode> {
+async fn index(Extension(admin): Extension<Arc<Admin>>) -> Result<Html<String>, StatusCode> {
     let template =
         templates::AdminIndex::new(&admin.site).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Html(template.render().unwrap()))
@@ -124,7 +124,7 @@ async fn index(State(admin): State<Arc<Admin>>) -> Result<Html<String>, StatusCo
 
 async fn list(
     Path(model): Path<String>,
-    State(admin): State<Arc<Admin>>,
+    Extension(admin): Extension<Arc<Admin>>,
     TypedHeader(accept): TypedHeader<RequestHeaderAccept>,
     Query(query): Query<HashMap<String, String>>, // TODO: array not supported
 ) -> Result<HtmlOrJson, StatusCode> {
@@ -156,7 +156,7 @@ async fn list(
 
 async fn get_create_template(
     Path(model): Path<String>,
-    State(admin): State<Arc<Admin>>,
+    Extension(admin): Extension<Arc<Admin>>,
 ) -> Result<Html<String>, StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     let template = admin
@@ -167,7 +167,7 @@ async fn get_create_template(
 
 async fn create_model<'r>(
     Path(model): Path<String>,
-    State(admin): State<Arc<Admin>>,
+    Extension(admin): Extension<Arc<Admin>>,
     Json(data): Json<AnyData>,
 ) -> Result<(StatusCode, Json<AnyData>), StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
@@ -179,7 +179,7 @@ async fn create_model<'r>(
 
 async fn get_update_template(
     Path((model, id)): Path<(String, String)>,
-    State(admin): State<Arc<Admin>>,
+    Extension(admin): Extension<Arc<Admin>>,
 ) -> Result<Html<String>, StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     let key = model
@@ -201,7 +201,7 @@ async fn get_update_template(
 
 async fn update_model(
     Path((model, id)): Path<(String, String)>,
-    State(admin): State<Arc<Admin>>,
+    Extension(admin): Extension<Arc<Admin>>,
     Json(data): Json<AnyData>,
 ) -> Result<(StatusCode, Json<AnyData>), StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
@@ -217,7 +217,7 @@ async fn update_model(
 
 async fn get_delete_template(
     Path((model, id)): Path<(String, String)>,
-    State(admin): State<Arc<Admin>>,
+    Extension(admin): Extension<Arc<Admin>>,
 ) -> Result<Html<String>, StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     let key = model
@@ -238,7 +238,7 @@ async fn get_delete_template(
 
 async fn delete_model(
     Path((model, id)): Path<(String, String)>,
-    State(admin): State<Arc<Admin>>,
+    Extension(admin): Extension<Arc<Admin>>,
     Json(data): Json<AnyData>,
 ) -> Result<(StatusCode, Json<AnyData>), StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
@@ -253,7 +253,7 @@ async fn delete_model(
     ))
 }
 
-pub fn get_router() -> Router<Arc<Admin>> {
+pub fn get_router() -> Router {
     Router::new()
         .route("/", get(index))
         .route("/:model/", get(list))
