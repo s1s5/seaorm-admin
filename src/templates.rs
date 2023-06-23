@@ -96,6 +96,7 @@ pub struct AdminFormAutoComplete {
     pub to_table: String,
     pub cols: Vec<AdminFormAutoCompleteCol>,
     pub nullable: bool,
+    pub multiple: bool,
 }
 
 #[derive(Template)]

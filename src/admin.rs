@@ -188,6 +188,7 @@ impl Admin {
                     to_table: extract_table_name(&x.to_tbl)?,
                     cols: extract_cols_from_relation_def(&x)?,
                     nullable: field_map.get(&x.from_col.to_string()).unwrap().nullable,
+                    multiple: false,
                 }) as Box<dyn templates::DynTemplate>)
             })
             .filter(|x| x.is_ok())
