@@ -19,7 +19,6 @@ pub mod rocket_admin;
 pub mod templates;
 #[cfg(test)]
 mod tests;
-// mod widgets;
 
 pub use admin::*;
 pub use admin_macro::ModelAdmin;
@@ -29,9 +28,7 @@ pub use filter::*;
 pub use json::*;
 pub use key::*;
 pub use parse::*;
-// pub use widgets::*;
 
-// pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, anyhow::Error>;
 pub type Json = serde_json::Value;
 
