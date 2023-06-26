@@ -1,9 +1,5 @@
-use super::{AdminField, CustomError, Json, Result};
-use crate::{json_force_str, ListQuery};
+use crate::{ListQuery, Result};
 pub use askama::{DynTemplate, Template};
-#[cfg(feature = "with-chrono")]
-use chrono::Timelike;
-use log::warn;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -83,6 +79,7 @@ pub struct AdminFormAutoCompleteChoice {
 
 #[derive(Debug, Clone)]
 pub struct AdminFormAutoCompleteCol {
+    pub value: String,
     pub from_col: String,
     pub to_col: String,
 }

@@ -1,12 +1,12 @@
 use axum::{extract::Extension, Router};
 use entity::{author, post, test_model};
 use sea_orm::Set;
-use seaorm_admin::{Admin, ModelAdmin};
+use seaorm_admin::{enum_field, Admin, ModelAdmin};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 fn format_author(model: &author::Model) -> String {
-    format!("author[{}]({})", model.id, model.name)
+    format!("[CUSTOM] author[{}]({})", model.id, model.name)
 }
 
 fn get_initial_author() -> author::ActiveModel {
@@ -33,14 +33,14 @@ struct AuthorAdmin;
 #[model_admin(module = post, auto_complete=[Author])]
 struct PostAdmin;
 
-// #[derive(ModelAdmin, Default)]
-// #[model_admin(module = test_model,
-//     widgets = [
-//         (EnumString, EnumWidget::from_enum(test_model::Category::iter())),
-//         (EnumI32, EnumWidget::from_enum(test_model::Color::iter())),
-//     ],
-// )]
-// struct TestAdmin;
+#[derive(ModelAdmin, Default)]
+#[model_admin(module = test_model,
+    form_fields = [
+        enum_field!(test_model::Column::EnumString, test_model::Category::iter()),
+        enum_field!(test_model::Column::EnumI32, test_model::Color::iter()),
+    ],
+)]
+struct TestAdmin;
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), hyper::Error> {
@@ -55,7 +55,7 @@ async fn main() -> std::result::Result<(), hyper::Error> {
     let mut admin = Admin::new(connection, "/admin");
     admin.add_model(AuthorAdmin);
     admin.add_model(PostAdmin);
-    // admin.add_model(TestAdmin);
+    admin.add_model(TestAdmin);
 
     let app = Router::new()
         .nest(
@@ -65,6 +65,7 @@ async fn main() -> std::result::Result<(), hyper::Error> {
         .layer(Extension(Arc::new(admin)));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
+    println!("listening {:?}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await

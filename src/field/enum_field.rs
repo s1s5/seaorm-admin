@@ -2,9 +2,19 @@ use super::FieldTrait;
 use crate::{json_force_str, templates::AdminFormSelect, Admin, Json, Result};
 use askama::DynTemplate;
 use async_trait::async_trait;
+use sea_orm::ColumnTrait;
 use std::collections::HashMap;
 
 pub struct EnumField(AdminFormSelect);
+
+#[macro_export]
+macro_rules! enum_field {
+    ($col:path, $e:expr) => {
+        seaorm_admin::AdminField::Field(Box::new(seaorm_admin::EnumField::from_enum($col, $e)))
+    };
+}
+
+pub use enum_field;
 
 impl EnumField {
     pub fn new(name: &str, choices: Vec<(String, String)>) -> Self {
@@ -19,13 +29,14 @@ impl EnumField {
         })
     }
 
-    pub fn from_enum<T>(name: &str, it: T) -> Self
+    pub fn from_enum<C, T>(col: C, it: T) -> Self
     where
+        C: ColumnTrait,
         T: Iterator,
         <T as Iterator>::Item: std::fmt::Debug + std::fmt::Display,
     {
         Self::new(
-            name,
+            &col.to_string(),
             it.map(|x| {
                 (
                     x.to_string().trim_matches('\'').to_string(),

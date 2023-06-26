@@ -12,26 +12,26 @@ pub struct ModelAdminExpander {
     module: ExprPath,
     ident: Ident,
     list_display: Option<Vec<IdentOrLiteral>>,
-    form_fields: Option<Vec<syn::Expr>>,
-    auto_complete: Option<Vec<syn::Expr>>,
+    editable_fields: Option<Vec<syn::Expr>>,
+    auto_complete: Option<Vec<syn::Ident>>,
     ordering: Option<Vec<(syn::Expr, syn::Expr)>>,
     search_fields: Option<Vec<syn::Expr>>,
     format: Option<Ident>,
     initial_value: Option<Ident>,
-    widgets: Option<Vec<(syn::Expr, syn::Expr)>>,
+    form_fields: Option<Vec<syn::Expr>>,
 }
 
 impl ModelAdminExpander {
     pub fn new(ident: Ident, attrs: Vec<Attribute>) -> std::result::Result<Self, syn::Error> {
         let mut module = None;
         let mut list_display = None;
-        let mut form_fields = None;
+        let mut editable_fields = None;
         let mut auto_complete = None;
         let mut ordering = None;
         let mut search_fields = None;
         let mut format = None;
         let mut initial_value = None;
-        let mut widgets = None;
+        let mut form_fields = None;
 
         attrs.iter().try_for_each(|attr| {
             if let Ok(list) = attr.parse_args_with(Punctuated::<Meta, Comma>::parse_terminated) {
@@ -43,7 +43,8 @@ impl ModelAdminExpander {
                             } else if ident == "list_display" {
                                 list_display = Some(super::parse::parse_list_display(ident, &nv)?);
                             } else if ident == "fields" {
-                                form_fields = Some(super::parse::parse_form_fields(ident, &nv)?);
+                                editable_fields =
+                                    Some(super::parse::parse_editable_fields(ident, &nv)?);
                             } else if ident == "auto_complete" {
                                 auto_complete =
                                     Some(super::parse::parse_auto_complete(ident, &nv)?);
@@ -57,8 +58,9 @@ impl ModelAdminExpander {
                             } else if ident == "initial_value" {
                                 initial_value =
                                     Some(super::parse::parse_initial_value(ident, nv)?.clone());
-                            } else if ident == "widgets" {
-                                widgets = Some(super::parse::parse_widgets(ident, nv)?.clone());
+                            } else if ident == "form_fields" {
+                                form_fields =
+                                    Some(super::parse::parse_form_fields(ident, nv)?.clone());
                             }
                         }
                     }
@@ -72,13 +74,13 @@ impl ModelAdminExpander {
             module,
             ident,
             list_display,
-            form_fields,
+            editable_fields,
             auto_complete,
             ordering,
             search_fields,
             format,
             initial_value,
-            widgets,
+            form_fields,
         })
     }
 
@@ -182,7 +184,7 @@ impl ModelAdminExpander {
     fn expand_get_editable_fields(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
-        if let Some(form_fields) = &self.form_fields {
+        if let Some(form_fields) = &self.editable_fields {
             Ok(quote! {
                 impl #ident {
                     fn get_editable_fields() -> Vec<#module::Column> {
@@ -422,15 +424,52 @@ impl ModelAdminExpander {
     fn expand_get_form_fields_impl(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
-        let widgets = self.widgets.clone().unwrap_or(vec![]);
-        let (columns, widgets): (Vec<syn::Expr>, Vec<syn::Expr>) = widgets.into_iter().unzip();
+        let auto_complete = self.auto_complete.clone().unwrap_or(vec![]);
+        let form_fields = self.form_fields.clone().unwrap_or(vec![]);
 
         Ok(quote!(
         impl #ident {
             fn get_form_fields_impl() -> Vec<seaorm_admin::AdminField> {
-                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait, ColumnTrait};
+                use std::collections::{HashSet, HashMap};
+                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait, ColumnTrait, RelationTrait};
+                let auto_complete: Vec<sea_orm::RelationDef> = vec![#((#module::Relation::#auto_complete.def())),*];
+                let ac_col_set:HashSet<String> = auto_complete
+                    .iter()
+                    .map(|x| seaorm_admin::extract_cols_from_relation_def(&x).unwrap())
+                    .flatten()
+                    .map(|x| x.from_col)
+                    .collect();
+                let ac_fields: Vec<_> = auto_complete
+                    .into_iter()
+                    .map(|x| seaorm_admin::ForeignKeyField::new(
+                        &x,
+                        seaorm_admin::relation_def_is_nullable(
+                            &x,
+                            &#module :: Column::iter().collect(),
+                        ),
+                    ))
+                    .filter(|x| x.is_ok())
+                    .map(|x| x.unwrap())
+                    .map(|x| seaorm_admin::AdminField::Field(Box::new(x)))
+                    .collect();
+                let mut ex_fields: HashMap<String, seaorm_admin::AdminField> = vec![#(#form_fields),*]
+                    .into_iter()
+                    .map(|x: seaorm_admin::AdminField| (x.name().into(), x)).collect();
 
-                #ident::get_editable_fields().into_iter().map(|x| seaorm_admin::get_default_field(&x.to_string(), &x.def().get_column_type())).filter(|x| x.is_ok()).map(|x| x.unwrap()).collect()
+                let mut fields: Vec<seaorm_admin::AdminField> = #ident::get_editable_fields()
+                    .into_iter()
+                    .filter(|x| !ac_col_set.contains(&x.to_string()))
+                    .map(|x| {
+                        if let Some(field) = ex_fields.remove(&x.to_string()) {
+                            Ok(field)
+                        } else {
+                            seaorm_admin::get_default_field(&x.to_string(), &x.def().get_column_type())
+                        }
+                    })
+                    .filter(|x| x.is_ok()).map(|x| x.unwrap()).collect();
+                fields.extend(ac_fields);
+                fields.extend(ex_fields.into_values());
+                fields
             }
         }))
     }

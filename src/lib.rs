@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 pub use async_trait::async_trait;
 pub use sea_orm;
+use sea_orm::DatabaseConnection;
 pub use sea_orm::Iden; // なんで必要なのかわからん・・
-use sea_orm::{DatabaseConnection, RelationDef};
 
 mod admin;
 #[cfg(feature = "with-axum")]

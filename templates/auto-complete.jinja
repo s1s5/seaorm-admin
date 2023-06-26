@@ -1,4 +1,7 @@
 <label for="{{ name }}-id" class="form-label">{{ label }}</label>
+{% for col in cols %}
+<input type="hidden" id="{{ col.from_col }}-id" name="{{ col.from_col }}" value="{{ col.value }}"/>
+{% endfor %}
 {% if true ~%}
 <select
   class="auto-complete form-control"

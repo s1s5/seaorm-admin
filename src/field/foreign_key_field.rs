@@ -1,12 +1,15 @@
+use std::collections::HashMap;
+
 use super::FieldTrait;
 use crate::{
+    json_force_str,
     templates::{self, AdminFormAutoComplete},
     Admin, CustomError, Json, Result,
 };
 use askama::DynTemplate;
 use async_trait::async_trait;
 use itertools::Itertools;
-use sea_orm::{ColumnDef, RelationDef};
+use sea_orm::{sea_query::IdenList, ColumnTrait, RelationDef};
 
 pub struct ForeignKeyField(AdminFormAutoComplete);
 
@@ -53,7 +56,7 @@ fn relation_def_to_form_label(def: &sea_orm::RelationDef) -> Result<String> {
         .join("; "))
 }
 
-fn extract_cols_from_relation_def(
+pub fn extract_cols_from_relation_def(
     def: &sea_orm::RelationDef,
 ) -> Result<Vec<templates::AdminFormAutoCompleteCol>> {
     let fr = identity_to_vec_string(&def.from_col);
@@ -62,25 +65,40 @@ fn extract_cols_from_relation_def(
         .into_iter()
         .zip(to.into_iter())
         .map(|(f, t)| templates::AdminFormAutoCompleteCol {
+            value: "".to_string(),
             from_col: f,
             to_col: t,
         })
         .collect())
 }
 
+pub fn relation_def_is_nullable<T>(def: &sea_orm::RelationDef, columns: &Vec<T>) -> bool
+where
+    T: ColumnTrait,
+{
+    let m: HashMap<String, bool> = columns
+        .iter()
+        .map(|x| (x.to_string(), x.def().is_null()))
+        .collect();
+    def.from_col
+        .clone()
+        .into_iter()
+        .any(|x| m.get(&x.to_string()).map(|x| x.clone()).unwrap_or(false))
+}
+
 impl ForeignKeyField {
-    fn new(col_def: ColumnDef, rel_def: RelationDef) -> Result<Box<dyn FieldTrait>> {
-        Ok(Box::new(ForeignKeyField(AdminFormAutoComplete {
-            name: relation_def_to_form_name(&rel_def)?,
-            label: relation_def_to_form_label(&rel_def)?,
+    pub fn new(rel_def: &RelationDef, nullable: bool) -> Result<Self> {
+        Ok(ForeignKeyField(AdminFormAutoComplete {
+            name: relation_def_to_form_name(rel_def)?,
+            label: relation_def_to_form_label(rel_def)?,
             choice: None,
             help_text: None,
             disabled: false,
             to_table: extract_table_name(&rel_def.to_tbl)?,
-            cols: extract_cols_from_relation_def(&rel_def)?,
-            nullable: col_def.is_null(),
+            cols: extract_cols_from_relation_def(rel_def)?,
+            nullable,
             multiple: false,
-        })))
+        }))
     }
 }
 
@@ -113,6 +131,17 @@ impl FieldTrait for ForeignKeyField {
                 .get(&admin.get_connection(), Json::Object(m))
                 .await
                 .unwrap_or(None);
+            template.cols = template
+                .cols
+                .iter()
+                .map(|x| templates::AdminFormAutoCompleteCol {
+                    value: super::tool::get_value(Some(parent_value), &x.from_col)
+                        .map(|x| json_force_str(x))
+                        .unwrap_or("".to_string()),
+                    from_col: x.from_col.clone(),
+                    to_col: x.to_col.clone(),
+                })
+                .collect();
 
             if let Some(tr) = tr {
                 template.choice = Some(templates::AdminFormAutoCompleteChoice {

@@ -1,7 +1,7 @@
 use entity::{author, post, test_model};
 use sea_orm::Set;
 use seaorm_admin::rocket_admin::get_admin_routes;
-use seaorm_admin::{Admin, EnumWidget, ModelAdmin};
+use seaorm_admin::{enum_field, Admin, ModelAdmin};
 use std::sync::Arc;
 
 fn format_author(model: &author::Model) -> String {
@@ -34,9 +34,9 @@ struct PostAdmin;
 
 #[derive(ModelAdmin, Default)]
 #[model_admin(module = test_model,
-    widgets = [
-        (EnumString, EnumWidget::from_enum(test_model::Category::iter())),
-        (EnumI32, EnumWidget::from_enum(test_model::Color::iter())),
+    form_fields = [
+        enum_field!(test_model::Column::EnumString, test_model::Category::iter()),
+        enum_field!(test_model::Column::EnumI32, test_model::Color::iter()),
     ],
 )]
 struct TestAdmin;

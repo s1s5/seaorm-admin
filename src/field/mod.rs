@@ -15,8 +15,10 @@ use async_trait::async_trait;
 pub use checkbox_field::CheckboxField;
 pub use date_time_field::DateTimeField;
 pub use default_field::get_default_field;
-pub use enum_field::EnumField;
-pub use foreign_key_field::ForeignKeyField;
+pub use enum_field::{enum_field, EnumField};
+pub use foreign_key_field::{
+    extract_cols_from_relation_def, relation_def_is_nullable, ForeignKeyField,
+};
 pub use input_field::InputField;
 pub use textarea_field::TextareaField;
 pub use timestamp_field::TimestampField;
