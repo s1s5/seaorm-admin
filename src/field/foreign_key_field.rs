@@ -1,6 +1,5 @@
 use super::FieldTrait;
 use crate::{
-    json_force_str,
     templates::{self, AdminFormAutoComplete},
     Admin, CustomError, Json, Result,
 };

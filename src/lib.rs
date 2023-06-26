@@ -25,10 +25,7 @@ pub use admin::*;
 pub use admin_macro::ModelAdmin;
 pub use error::*;
 pub use field::*;
-pub use field::{
-    default_field::DefaultField, default_field::EnumWidgetFactory,
-    foreign_key_field::ForeignKeyField, AdminField,
-};
+pub use field::{AdminField, ForeignKeyField};
 pub use filter::*;
 pub use json::*;
 pub use key::*;

@@ -1,13 +1,9 @@
 // use crate::{DefaultWidget, Widget};
 
-use super::{templates, AdminField, CustomError, Json, ModelAdminTrait, Result};
+use super::{templates, AdminField, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
-use itertools::Itertools;
-use sea_orm::{DatabaseConnection, DeriveIden};
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Deref,
-};
+use sea_orm::DatabaseConnection;
+use std::{collections::HashMap, ops::Deref};
 
 // fn identity_to_vec_string(ident: &sea_orm::Identity) -> Vec<String> {
 //     match ident {

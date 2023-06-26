@@ -8,7 +8,7 @@ use axum::{
     Router, TypedHeader,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, pin::Pin, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 // ----- HtmlOrJson -----
 #[derive(Debug, Clone)]

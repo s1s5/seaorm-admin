@@ -1,4 +1,4 @@
-use crate::{CustomError, Result};
+use crate::Result;
 use std::collections::HashMap;
 // use itertools::Itertools;
 use sea_orm::sea_query::{Condition, Expr};
