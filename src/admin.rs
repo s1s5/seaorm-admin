@@ -1,4 +1,4 @@
-use crate::{DefaultWidget, Widget};
+// use crate::{DefaultWidget, Widget};
 
 use super::{templates, AdminField, CustomError, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
@@ -9,63 +9,63 @@ use std::{
     ops::Deref,
 };
 
-fn identity_to_vec_string(ident: &sea_orm::Identity) -> Vec<String> {
-    match ident {
-        sea_orm::Identity::Unary(i0) => {
-            vec![i0.to_string()]
-        }
-        sea_orm::Identity::Binary(i0, i1) => {
-            vec![i0.to_string(), i1.to_string()]
-        }
-        sea_orm::Identity::Ternary(i0, i1, i2) => {
-            vec![i0.to_string(), i1.to_string(), i2.to_string()]
-        }
-    }
-}
+// fn identity_to_vec_string(ident: &sea_orm::Identity) -> Vec<String> {
+//     match ident {
+//         sea_orm::Identity::Unary(i0) => {
+//             vec![i0.to_string()]
+//         }
+//         sea_orm::Identity::Binary(i0, i1) => {
+//             vec![i0.to_string(), i1.to_string()]
+//         }
+//         sea_orm::Identity::Ternary(i0, i1, i2) => {
+//             vec![i0.to_string(), i1.to_string(), i2.to_string()]
+//         }
+//     }
+// }
 
-fn extract_table_name(ident: &sea_orm::sea_query::TableRef) -> Result<String> {
-    match ident {
-        sea_orm::sea_query::TableRef::Table(t) => Ok(t.to_string()),
-        _ => Err(Box::new(CustomError::new("Unsupported Type"))),
-    }
-}
+// fn extract_table_name(ident: &sea_orm::sea_query::TableRef) -> Result<String> {
+//     match ident {
+//         sea_orm::sea_query::TableRef::Table(t) => Ok(t.to_string()),
+//         _ => Err(Box::new(CustomError::new("Unsupported Type"))),
+//     }
+// }
 
-fn relation_def_to_form_name(def: &sea_orm::RelationDef) -> Result<String> {
-    let fr = identity_to_vec_string(&def.from_col);
-    let to = identity_to_vec_string(&def.to_col);
-    Ok(fr
-        .iter()
-        .zip(to.iter())
-        .map(|(a, b)| format!("{}_{}", a, b))
-        .join("-"))
-}
+// fn relation_def_to_form_name(def: &sea_orm::RelationDef) -> Result<String> {
+//     let fr = identity_to_vec_string(&def.from_col);
+//     let to = identity_to_vec_string(&def.to_col);
+//     Ok(fr
+//         .iter()
+//         .zip(to.iter())
+//         .map(|(a, b)| format!("{}_{}", a, b))
+//         .join("-"))
+// }
 
-fn relation_def_to_form_label(def: &sea_orm::RelationDef) -> Result<String> {
-    let fr_table_name = extract_table_name(&def.from_tbl)?;
-    let to_table_name = extract_table_name(&def.to_tbl)?;
-    let fr = identity_to_vec_string(&def.from_col);
-    let to = identity_to_vec_string(&def.to_col);
-    Ok(fr
-        .iter()
-        .zip(to.iter())
-        .map(|(a, b)| format!("{}.{} => {}.{}", fr_table_name, a, to_table_name, b))
-        .join("; "))
-}
+// fn relation_def_to_form_label(def: &sea_orm::RelationDef) -> Result<String> {
+//     let fr_table_name = extract_table_name(&def.from_tbl)?;
+//     let to_table_name = extract_table_name(&def.to_tbl)?;
+//     let fr = identity_to_vec_string(&def.from_col);
+//     let to = identity_to_vec_string(&def.to_col);
+//     Ok(fr
+//         .iter()
+//         .zip(to.iter())
+//         .map(|(a, b)| format!("{}.{} => {}.{}", fr_table_name, a, to_table_name, b))
+//         .join("; "))
+// }
 
-fn extract_cols_from_relation_def(
-    def: &sea_orm::RelationDef,
-) -> Result<Vec<templates::AdminFormAutoCompleteCol>> {
-    let fr = identity_to_vec_string(&def.from_col);
-    let to = identity_to_vec_string(&def.to_col);
-    Ok(fr
-        .into_iter()
-        .zip(to.into_iter())
-        .map(|(f, t)| templates::AdminFormAutoCompleteCol {
-            from_col: f,
-            to_col: t,
-        })
-        .collect())
-}
+// fn extract_cols_from_relation_def(
+//     def: &sea_orm::RelationDef,
+// ) -> Result<Vec<templates::AdminFormAutoCompleteCol>> {
+//     let fr = identity_to_vec_string(&def.from_col);
+//     let to = identity_to_vec_string(&def.to_col);
+//     Ok(fr
+//         .into_iter()
+//         .zip(to.into_iter())
+//         .map(|(f, t)| templates::AdminFormAutoCompleteCol {
+//             from_col: f,
+//             to_col: t,
+//         })
+//         .collect())
+// }
 
 fn to_query_string(params: &HashMap<String, Vec<String>>, page: u64) -> String {
     let mut query = String::new();
@@ -105,6 +105,12 @@ where
     fn get_connection(&self) -> &DatabaseConnection {
         self.conn.deref()
     }
+}
+
+enum FormType {
+    CREATE,
+    UPDATE,
+    DELETE,
 }
 
 pub struct Admin {
@@ -150,77 +156,6 @@ impl Admin {
 
     pub fn get_model(&self, table_name: &str) -> Option<&Box<dyn ModelAdminTrait + Send + Sync>> {
         self.models.get(table_name)
-    }
-
-    fn get_form_fields(
-        &self,
-        base_fields: &Vec<(AdminField, Box<dyn Widget>)>,
-        auto_complete: &Vec<sea_orm::RelationDef>,
-        row: Option<&Json>,
-        relations: Option<Vec<Option<templates::AdminFormAutoCompleteChoice>>>,
-    ) -> Result<Vec<Box<dyn DynTemplate>>> {
-        let relations = if let Some(relations) = relations {
-            relations
-        } else {
-            vec![None; auto_complete.len()]
-        };
-        let auto_complete_set: HashSet<String> = auto_complete
-            .iter()
-            .flat_map(|x| identity_to_vec_string(&x.from_col))
-            .collect();
-
-        let field_map: HashMap<String, AdminField> = base_fields
-            .iter()
-            .map(|(x, _)| (x.name.clone(), x.clone()))
-            .collect();
-
-        let auto_complete_fields: Vec<_> = auto_complete
-            .iter()
-            .zip(relations.into_iter())
-            .filter(|x| field_map.contains_key(&x.0.from_col.to_string()))
-            .map(|(x, rel)| {
-                Ok(Box::new(templates::AdminFormAutoComplete {
-                    name: relation_def_to_form_name(&x)?,
-                    label: relation_def_to_form_label(&x)?,
-                    choice: rel,
-                    help_text: None,
-                    disabled: false,
-                    to_table: extract_table_name(&x.to_tbl)?,
-                    cols: extract_cols_from_relation_def(&x)?,
-                    nullable: field_map.get(&x.from_col.to_string()).unwrap().nullable,
-                    multiple: false,
-                }) as Box<dyn templates::DynTemplate>)
-            })
-            .filter(|x| x.is_ok())
-            .map(|x: Result<Box<dyn templates::DynTemplate>>| x.unwrap())
-            .collect();
-
-        Ok(base_fields
-            .iter()
-            .map(|(x, w)| {
-                let value = if let Some(row) = row {
-                    row.get(&x.name)
-                } else {
-                    None
-                };
-                if auto_complete_set.contains(&x.name) {
-                    Some(Box::new(templates::AdminFormInput {
-                        name: x.name.clone(),
-                        label: x.name.clone(),
-                        value: value.map(|x| super::json_force_str(x)),
-                        r#type: "test".to_string(), // "hidden".to_string(),
-                        help_text: None,
-                        disabled: true,
-                        attributes: HashMap::new(),
-                    }) as Box<dyn templates::DynTemplate>)
-                } else {
-                    w.create(x, value).ok()
-                }
-            })
-            .filter(|x| x.is_some())
-            .map(|x| x.unwrap())
-            .chain(auto_complete_fields.into_iter())
-            .collect())
     }
 
     pub async fn get_list_as_json(
@@ -295,7 +230,26 @@ impl Admin {
         })
     }
 
-    pub fn get_create_template(
+    async fn get_form_fields(
+        &self,
+        base_fields: Vec<AdminField>,
+        row: Option<&Json>,
+        form_type: FormType,
+    ) -> Result<Vec<Box<dyn DynTemplate + Send>>> {
+        let mut templates = Vec::new();
+        for field in base_fields.iter() {
+            let disabled = match form_type {
+                FormType::CREATE => false,
+                FormType::UPDATE => false,
+                FormType::DELETE => true,
+            };
+            let r = field.get_template(self, row, disabled).await?;
+            templates.push(r);
+        }
+        Ok(templates)
+    }
+
+    pub async fn get_create_template(
         &self,
         model: &Box<dyn ModelAdminTrait + Send + Sync>,
     ) -> Result<templates::AdminCreateForm> {
@@ -306,45 +260,40 @@ impl Admin {
             model_name: model.get_table_name().into(),
             action: None,
             method: "POST".into(),
-            fields: self.get_form_fields(
-                &model.get_create_form_fields(),
-                &model.get_auto_complete(),
-                None,
-                None,
-            )?,
+            fields: self
+                .get_form_fields(model.get_create_form_fields(), None, FormType::CREATE)
+                .await?,
         })
     }
 
-    async fn get_relations(
-        &self,
-        model: &Box<dyn ModelAdminTrait + Send + Sync>,
-        row: &Json,
-    ) -> Result<Vec<Option<(&Box<dyn ModelAdminTrait + Send + Sync>, Json)>>> {
-        let mut result = Vec::new();
-        for rdef in model.get_auto_complete() {
-            let tm = self
-                .get_model(&extract_table_name(&rdef.to_tbl)?)
-                .ok_or(CustomError::new("no table found"))?;
-            let m: serde_json::Map<String, Json> = extract_cols_from_relation_def(&rdef)?
-                .iter()
-                .map(|k| (k.to_col.clone(), row.get(&k.from_col)))
-                .filter(|x| x.1.filter(|x| !x.is_null()).is_some())
-                .map(|x| (x.0, x.1.unwrap().clone()))
-                .collect();
-            let tr = tm
-                .get(&self.get_connection(), Json::Object(m))
-                .await
-                .unwrap_or(None);
-
-            if let Some(tr) = tr {
-                result.push(Some((tm, tr)));
-            } else {
-                result.push(None);
-            }
-        }
-
-        Ok(result)
-    }
+    // async fn get_relations(
+    //     &self,
+    //     model: &Box<dyn ModelAdminTrait + Send + Sync>,
+    //     row: &Json,
+    // ) -> Result<Vec<Option<(&Box<dyn ModelAdminTrait + Send + Sync>, Json)>>> {
+    //     let mut result = Vec::new();
+    //     for rdef in model.get_auto_complete() {
+    //         let tm = self
+    //             .get_model(&extract_table_name(&rdef.to_tbl)?)
+    //             .ok_or(CustomError::new("no table found"))?;
+    //         let m: serde_json::Map<String, Json> = extract_cols_from_relation_def(&rdef)?
+    //             .iter()
+    //             .map(|k| (k.to_col.clone(), row.get(&k.from_col)))
+    //             .filter(|x| x.1.filter(|x| !x.is_null()).is_some())
+    //             .map(|x| (x.0, x.1.unwrap().clone()))
+    //             .collect();
+    //         let tr = tm
+    //             .get(&self.get_connection(), Json::Object(m))
+    //             .await
+    //             .unwrap_or(None);
+    //         if let Some(tr) = tr {
+    //             result.push(Some((tm, tr)));
+    //         } else {
+    //             result.push(None);
+    //         }
+    //     }
+    //     Ok(result)
+    // }
 
     pub async fn get_update_template(
         &self,
@@ -352,21 +301,25 @@ impl Admin {
         row: &Json,
     ) -> Result<templates::AdminUpdateForm> {
         let id = model.json_to_key(row)?;
-        let relations = self
-            .get_relations(model, row)
-            .await?
-            .iter()
-            .map(|x| {
-                Ok(if let Some((tm, tr)) = x {
-                    Some(templates::AdminFormAutoCompleteChoice {
-                        label: tm.to_str(tr)?,
-                        value: tm.json_to_key(tr)?,
-                    })
-                } else {
-                    None
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
+        // let relations = self
+        //     .get_relations(model, row)
+        //     .await?
+        //     .iter()
+        //     .map(|x| {
+        //         Ok(if let Some((tm, tr)) = x {
+        //             Some(templates::AdminFormAutoCompleteChoice {
+        //                 label: tm.to_str(tr)?,
+        //                 value: tm.json_to_key(tr)?,
+        //             })
+        //         } else {
+        //             None
+        //         })
+        //     })
+        //     .collect::<Result<Vec<_>>>()?;
+        let fields = model.get_update_form_fields();
+        let fields = self
+            .get_form_fields(fields, Some(row), FormType::UPDATE)
+            .await?;
         Ok(templates::AdminUpdateForm {
             site: self.site.clone(),
             form_id: format!("{}-update", model.get_table_name()),
@@ -374,16 +327,11 @@ impl Admin {
             model_name: model.get_table_name().into(),
             action: None,
             method: "POST".into(),
-            fields: self.get_form_fields(
-                &model.get_update_form_fields(),
-                &model.get_auto_complete(),
-                Some(row),
-                Some(relations),
-            )?,
+            fields,
         })
     }
 
-    pub fn get_delete_template(
+    pub async fn get_delete_template(
         &self,
         model: &Box<dyn ModelAdminTrait + Send + Sync>,
         row: &Json,
@@ -396,18 +344,9 @@ impl Admin {
             model_name: model.get_table_name().into(),
             action: None,
             method: "POST".into(),
-            fields: model
-                .get_update_form_fields()
-                .iter()
-                .map(|(x, _)| {
-                    let mut x = x.clone();
-                    x.editable = false;
-                    x
-                })
-                .map(|x| DefaultWidget {}.create(&x, row.get(&x.name)).ok())
-                .filter(|x| x.is_some())
-                .map(|x| x.unwrap())
-                .collect(),
+            fields: self
+                .get_form_fields(model.get_update_form_fields(), Some(row), FormType::DELETE)
+                .await?,
         })
     }
 }

@@ -8,7 +8,7 @@ use axum::{
     Router, TypedHeader,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, pin::Pin, sync::Arc};
 
 // ----- HtmlOrJson -----
 #[derive(Debug, Clone)]
@@ -140,7 +140,7 @@ async fn list(
             let object_list = admin
                 .get_list_as_json(model, &request_info.query)
                 .await
-                .map_err(|_x: super::Error| StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
             Ok(HtmlOrJson::Json(Json(AnyData(object_list))))
         }
         RequestHeaderAccept::Html => {
@@ -161,6 +161,7 @@ async fn get_create_template(
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     let template = admin
         .get_create_template(model)
+        .await
         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Html(template.render().unwrap()))
 }
@@ -231,6 +232,7 @@ async fn get_delete_template(
 
     let template = admin
         .get_delete_template(model, &row)
+        .await
         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Html(template.render().unwrap()))

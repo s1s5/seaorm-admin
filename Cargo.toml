@@ -24,6 +24,7 @@ chrono = { version = "0.4.20", default-features = false, optional = true }
 rust_decimal = { version = "1", default-features = false, optional = true }
 time = { version = "0.3", default-features = false, optional = true }
 uuid = { version = "1", default-features = false, optional = true }
+anyhow = "*"
 
 
 [dependencies.sea-orm]

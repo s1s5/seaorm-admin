@@ -95,7 +95,7 @@ where
         if let sea_orm::ActiveValue::Set(value) = filter.get(*col) {
             qs = qs.filter(col.eq(value));
         } else if check_exists {
-            return Err(Box::new(CustomError::new("key not found")));
+            return Err(anyhow::anyhow!("key not found"));
         }
     }
 

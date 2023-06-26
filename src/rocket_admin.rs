@@ -140,7 +140,7 @@ pub async fn list(
         let object_list = admin
             .get_list_as_json(model, &request_info.query)
             .await
-            .map_err(|_x: super::Error| Status::InternalServerError)?;
+            .map_err(|_x| Status::InternalServerError)?;
         Ok(HtmlOrJson::Json(content::RawJson(
             serde_json::to_string(&object_list).map_err(|_x| Status::InternalServerError)?,
         )))
@@ -164,6 +164,7 @@ pub async fn get_create_template(
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
     let template = admin
         .get_create_template(model)
+        .await
         .map_err(|_x| Status::InternalServerError)?;
     Ok(content::RawHtml(template.render().unwrap()))
 }
@@ -237,6 +238,7 @@ pub async fn get_delete_template(
 
     let template = admin
         .get_delete_template(model, &row)
+        .await
         .map_err(|_x| Status::InternalServerError)?;
 
     Ok(content::RawHtml(template.render().unwrap()))
