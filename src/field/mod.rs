@@ -4,6 +4,7 @@ mod default_field;
 mod enum_field;
 mod foreign_key_field;
 mod input_field;
+mod relation;
 mod textarea_field;
 mod timestamp_field;
 mod tool;
@@ -25,18 +26,14 @@ pub use timestamp_field::TimestampField;
 
 pub enum AdminField {
     Field(Box<dyn FieldTrait + Send + Sync>),
-    OneToOne(Box<dyn RelationTrait + Send + Sync>),
-    OneToMany(Box<dyn RelationTrait + Send + Sync>),
-    ManyToMany(Box<dyn RelationTrait + Send + Sync>),
+    Relation(Box<dyn RelationTrait + Send + Sync>),
 }
 
 impl AdminField {
     pub fn name(&self) -> &str {
         match &self {
             AdminField::Field(f) => f.name(),
-            AdminField::OneToOne(f) => f.name(),
-            AdminField::OneToMany(f) => f.name(),
-            AdminField::ManyToMany(f) => f.name(),
+            AdminField::Relation(f) => f.name(),
         }
     }
 
@@ -48,9 +45,7 @@ impl AdminField {
     ) -> Result<Box<dyn DynTemplate + Send>> {
         match &self {
             AdminField::Field(f) => f.get_template(admin, parent_value, disabled).await,
-            AdminField::OneToOne(f) => f.get_template(admin, parent_value, disabled).await,
-            AdminField::OneToMany(f) => f.get_template(admin, parent_value, disabled).await,
-            AdminField::ManyToMany(f) => f.get_template(admin, parent_value, disabled).await,
+            AdminField::Relation(f) => f.get_template(admin, parent_value, disabled).await,
         }
     }
 }

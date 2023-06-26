@@ -98,6 +98,14 @@ pub struct AdminFormAutoComplete {
     pub multiple: bool,
 }
 
+#[derive(Template, Clone)]
+#[template(path = "relation-form.jinja")]
+pub struct RelationForm {
+    // pub name: String,
+    // pub nullable: bool,
+    // pub multiple: bool,
+}
+
 #[derive(Template)]
 #[template(path = "create-form.jinja")]
 pub struct AdminCreateForm {
