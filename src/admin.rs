@@ -1,7 +1,10 @@
 use super::{templates, AdminField, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
 use sea_orm::DatabaseConnection;
-use std::{collections::HashMap, ops::Deref};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+};
 
 fn to_query_string(params: &HashMap<String, Vec<String>>, page: u64) -> String {
     let mut query = String::new();
@@ -170,13 +173,20 @@ impl Admin {
         &self,
         base_fields: Vec<AdminField>,
         row: Option<&Json>,
+        primary_keys: Vec<String>,
         form_type: FormType,
     ) -> Result<Vec<Box<dyn DynTemplate + Send>>> {
         let mut templates = Vec::new();
+        let primary_keys: HashSet<String> = primary_keys.into_iter().collect();
         for field in base_fields.iter() {
             let disabled = match form_type {
-                FormType::CREATE => false,
-                FormType::UPDATE => false,
+                FormType::CREATE => {
+                    if primary_keys.contains(field.name()) {
+                        continue;
+                    }
+                    false
+                }
+                FormType::UPDATE => primary_keys.contains(field.name()),
                 FormType::DELETE => true,
             };
             let r = field.get_template(self, row, disabled).await?;
@@ -197,7 +207,12 @@ impl Admin {
             action: None,
             method: "POST".into(),
             fields: self
-                .get_form_fields(model.get_form_fields(), None, FormType::CREATE)
+                .get_form_fields(
+                    model.get_form_fields(),
+                    None,
+                    model.get_primary_keys(),
+                    FormType::CREATE,
+                )
                 .await?,
         })
     }
@@ -217,7 +232,12 @@ impl Admin {
             action: None,
             method: "POST".into(),
             fields: self
-                .get_form_fields(model.get_form_fields(), Some(row), FormType::UPDATE)
+                .get_form_fields(
+                    model.get_form_fields(),
+                    Some(row),
+                    model.get_primary_keys(),
+                    FormType::UPDATE,
+                )
                 .await?,
         })
     }
@@ -236,7 +256,12 @@ impl Admin {
             action: None,
             method: "POST".into(),
             fields: self
-                .get_form_fields(model.get_form_fields(), Some(row), FormType::DELETE)
+                .get_form_fields(
+                    model.get_form_fields(),
+                    Some(row),
+                    model.get_primary_keys(),
+                    FormType::DELETE,
+                )
                 .await?,
         })
     }
