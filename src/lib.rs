@@ -25,7 +25,6 @@ pub use admin::*;
 pub use admin_macro::ModelAdmin;
 pub use error::*;
 pub use field::*;
-pub use field::{AdminField, ForeignKeyField};
 pub use filter::*;
 pub use json::*;
 pub use key::*;
@@ -49,6 +48,7 @@ pub struct ListQuery {
 pub trait ModelAdminTrait {
     fn get_table_name(&self) -> &str;
     fn get_list_per_page(&self) -> u64;
+    fn get_primary_keys(&self) -> Vec<String>;
 
     fn to_str(&self, value: &Json) -> Result<String>;
 
@@ -58,11 +58,7 @@ pub trait ModelAdminTrait {
 
     fn list_display(&self) -> Vec<String>;
 
-    fn get_auto_complete(&self) -> Vec<RelationDef>;
-
-    fn get_create_form_fields(&self) -> Vec<AdminField>;
-
-    fn get_update_form_fields(&self) -> Vec<AdminField>;
+    fn get_form_fields(&self) -> Vec<AdminField>;
 
     async fn list(&self, conn: &DatabaseConnection, query: &ListQuery) -> Result<(u64, Vec<Json>)>;
 

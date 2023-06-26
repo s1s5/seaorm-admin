@@ -257,7 +257,7 @@ impl Admin {
             action: None,
             method: "POST".into(),
             fields: self
-                .get_form_fields(model.get_create_form_fields(), None, FormType::CREATE)
+                .get_form_fields(model.get_form_fields(), None, FormType::CREATE)
                 .await?,
         })
     }
@@ -312,10 +312,7 @@ impl Admin {
         //         })
         //     })
         //     .collect::<Result<Vec<_>>>()?;
-        let fields = model.get_update_form_fields();
-        let fields = self
-            .get_form_fields(fields, Some(row), FormType::UPDATE)
-            .await?;
+
         Ok(templates::AdminUpdateForm {
             site: self.site.clone(),
             form_id: format!("{}-update", model.get_table_name()),
@@ -323,7 +320,9 @@ impl Admin {
             model_name: model.get_table_name().into(),
             action: None,
             method: "POST".into(),
-            fields,
+            fields: self
+                .get_form_fields(model.get_form_fields(), Some(row), FormType::UPDATE)
+                .await?,
         })
     }
 
@@ -341,7 +340,7 @@ impl Admin {
             action: None,
             method: "POST".into(),
             fields: self
-                .get_form_fields(model.get_update_form_fields(), Some(row), FormType::DELETE)
+                .get_form_fields(model.get_form_fields(), Some(row), FormType::DELETE)
                 .await?,
         })
     }

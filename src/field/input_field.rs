@@ -6,18 +6,6 @@ use std::collections::HashMap;
 pub struct InputField(AdminFormInput);
 
 impl InputField {
-    fn new(name: &str) -> Self {
-        InputField(AdminFormInput {
-            name: name.into(),
-            label: name.into(),
-            r#type: "text".into(),
-            value: None,
-            help_text: None,
-            disabled: false,
-            attributes: HashMap::new(),
-        })
-    }
-
     pub fn new_with_type(name: &str, r#type: &str) -> Self {
         InputField(AdminFormInput {
             name: name.into(),

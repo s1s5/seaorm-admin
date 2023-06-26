@@ -4,10 +4,6 @@ use askama::DynTemplate;
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-pub struct EnumWidgetFactory {
-    choices: Vec<(String, String)>,
-}
-
 pub struct EnumField(AdminFormSelect);
 
 impl EnumField {

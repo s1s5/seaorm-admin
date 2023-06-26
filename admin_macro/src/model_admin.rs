@@ -179,13 +179,13 @@ impl ModelAdminExpander {
         ))
     }
 
-    fn expand_get_form_fields(&self) -> Result {
+    fn expand_get_editable_fields(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
         if let Some(form_fields) = &self.form_fields {
             Ok(quote! {
                 impl #ident {
-                    fn get_form_fields() -> Vec<#module::Column> {
+                    fn get_editable_fields() -> Vec<#module::Column> {
                         vec![#(#module :: Column:: #form_fields),*]
                     }
                 }
@@ -193,7 +193,7 @@ impl ModelAdminExpander {
         } else {
             Ok(quote!(
                 impl #ident {
-                    fn get_form_fields() -> Vec<#module :: Column> {
+                    fn get_editable_fields() -> Vec<#module :: Column> {
                         use seaorm_admin::sea_orm::Iterable;
                         #module :: Column::iter().collect()
                     }
@@ -287,6 +287,11 @@ impl ModelAdminExpander {
                     #ident::get_list_per_page()
                 }
 
+                fn get_primary_keys(&self) -> Vec<String> {
+                    use seaorm_admin::sea_orm::Iden;
+                    #ident::get_keys().into_iter().map(|x| x.to_string()).collect()
+                }
+
                 fn to_str(&self, value: &seaorm_admin::Json) -> seaorm_admin::Result<String> {
                     #ident::to_str_impl(value)
                 }
@@ -299,21 +304,12 @@ impl ModelAdminExpander {
                     seaorm_admin::from_key_string(&#ident::get_keys(), key)
                 }
 
-                fn get_create_form_fields(&self) -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
-                    #ident::get_create_form_fields_impl()
-                }
-
-                fn get_update_form_fields(&self) -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
-                    #ident::get_update_form_fields_impl()
-                }
-
                 fn list_display(&self) -> Vec<String> {
                     #ident::get_list_display()
                 }
 
-                fn get_auto_complete(&self) -> Vec<seaorm_admin::sea_orm::RelationDef> {
-                    use seaorm_admin::sea_orm::RelationTrait;
-                    #ident::get_auto_complete().iter().map(|x| x.def()).collect()
+                fn get_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
+                    #ident::get_form_fields_impl()
                 }
 
                 async fn list(
@@ -423,7 +419,7 @@ impl ModelAdminExpander {
         }
     }
 
-    fn expand_create_form_fields_impl(&self) -> Result {
+    fn expand_get_form_fields_impl(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
         let widgets = self.widgets.clone().unwrap_or(vec![]);
@@ -431,53 +427,10 @@ impl ModelAdminExpander {
 
         Ok(quote!(
         impl #ident {
-            fn get_create_form_fields_impl() -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
-                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait};
+            fn get_form_fields_impl() -> Vec<seaorm_admin::AdminField> {
+                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait, ColumnTrait};
 
-                // primary keyは隠す
-                let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
-                let model = #ident::get_initial_value();
-                let mut widgets: std::collections::HashMap<String, Box<dyn seaorm_admin::Widget>> = vec![#((#module :: Column:: #columns.to_string(), Box::new(#widgets) as Box<dyn seaorm_admin::Widget>)),*].into_iter().collect();
-
-                #ident::get_form_fields().into_iter().filter(
-                    |x| !keys.contains(&x.to_string())).filter(
-                        |x| !model.get(*x).is_set()
-                    ).map(|x| {
-                        let a = seaorm_admin::AdminField::create_from(&x, true);
-                        if let Some(w) = widgets.remove(&x.to_string()) {
-                            (a, w)
-                        } else {
-                            (a, Box::new(seaorm_admin::DefaultWidget{}) as Box<dyn seaorm_admin::Widget>)
-                        }
-                    }).collect()
-            }
-        }))
-    }
-
-    fn expand_update_form_fields_impl(&self) -> Result {
-        let ident = &self.ident;
-        let module = &self.module;
-        let widgets = self.widgets.clone().unwrap_or(vec![]);
-        let (columns, widgets): (Vec<syn::Expr>, Vec<syn::Expr>) = widgets.into_iter().unzip();
-
-        Ok(quote!(
-        impl #ident {
-            fn get_update_form_fields_impl() -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
-                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
-
-                let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
-                let mut widgets: std::collections::HashMap<String, Box<dyn seaorm_admin::Widget>> = vec![#((#module :: Column:: #columns.to_string(), Box::new(#widgets) as Box<dyn seaorm_admin::Widget>)),*].into_iter().collect();
-
-                #ident::get_form_fields()
-                    .into_iter()
-                    .map(|x| {
-                        let a = seaorm_admin::AdminField::create_from(&x, !keys.contains(&x.to_string()));
-                        if let Some(w) = widgets.remove(&x.to_string()) {
-                            (a, w)
-                        } else {
-                            (a, Box::new(seaorm_admin::DefaultWidget{}) as Box<dyn seaorm_admin::Widget>)
-                        }
-                    }).collect()
+                #ident::get_editable_fields().into_iter().map(|x| seaorm_admin::get_default_field(&x.to_string(), &x.def().get_column_type())).filter(|x| x.is_ok()).map(|x| x.unwrap()).collect()
             }
         }))
     }
@@ -625,7 +578,7 @@ impl ModelAdminExpander {
             self.expand_get_auto_complete()?,
             self.expand_get_ordering()?,
             self.expand_get_fields()?,
-            self.expand_get_form_fields()?,
+            self.expand_get_editable_fields()?,
             self.expand_get_keys()?,
             self.expand_get_search_fields()?,
             self.expand_get_list_per_page()?,
@@ -633,8 +586,7 @@ impl ModelAdminExpander {
             self.expand_impl()?,
             self.expand_to_str_impl()?,
             self.expand_to_json_for_list()?,
-            self.expand_create_form_fields_impl()?,
-            self.expand_update_form_fields_impl()?,
+            self.expand_get_form_fields_impl()?,
             self.expand_list_impl()?,
             self.expand_get_impl()?,
             self.expand_insert_impl()?,
