@@ -27,18 +27,19 @@ impl TimestampField {
 
 #[async_trait]
 impl FieldTrait for TimestampField {
-    fn name(&self) -> &str {
-        &self.0.name
+    fn fields(&self) -> Vec<String> {
+        vec![self.0.name.clone()]
     }
     async fn get_template(
         &self,
         _admin: &Admin,
         parent_value: Option<&Json>,
+        prefix: &str,
         disabled: bool,
     ) -> Result<Box<dyn DynTemplate + Send>> {
         let value = super::tool::get_value(parent_value, &self.0.name);
         let mut template = AdminFormDatetimeInput {
-            name: self.0.name.clone(),
+            name: format!("{}{}", prefix, self.0.name.clone()),
             label: self.0.label.clone(),
             value: None,
             with_timezone: true,

@@ -98,12 +98,22 @@ pub struct AdminFormAutoComplete {
     pub multiple: bool,
 }
 
-#[derive(Template, Clone)]
+pub struct RelationFormRowField {
+    pub is_pkey: bool,
+    pub field: Box<dyn DynTemplate + Send>,
+}
+
+pub struct RelationFormRow {
+    pub fields: Vec<RelationFormRowField>,
+}
+
+#[derive(Template)]
 #[template(path = "relation-form.jinja")]
 pub struct RelationForm {
-    // pub name: String,
+    pub name: String,
     // pub nullable: bool,
     // pub multiple: bool,
+    pub rows: Vec<RelationFormRow>,
 }
 
 #[derive(Template)]

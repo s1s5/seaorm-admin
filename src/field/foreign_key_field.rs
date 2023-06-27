@@ -13,7 +13,7 @@ use sea_orm::{sea_query::IdenList, ColumnTrait, RelationDef};
 
 pub struct ForeignKeyField(AdminFormAutoComplete);
 
-fn identity_to_vec_string(ident: &sea_orm::Identity) -> Vec<String> {
+pub fn identity_to_vec_string(ident: &sea_orm::Identity) -> Vec<String> {
     match ident {
         sea_orm::Identity::Unary(i0) => {
             vec![i0.to_string()]
@@ -27,7 +27,7 @@ fn identity_to_vec_string(ident: &sea_orm::Identity) -> Vec<String> {
     }
 }
 
-fn extract_table_name(ident: &sea_orm::sea_query::TableRef) -> Result<String> {
+pub fn extract_table_name(ident: &sea_orm::sea_query::TableRef) -> Result<String> {
     match ident {
         sea_orm::sea_query::TableRef::Table(t) => Ok(t.to_string()),
         _ => Err(anyhow::anyhow!("Unsupported Type")),
@@ -104,14 +104,15 @@ impl ForeignKeyField {
 
 #[async_trait]
 impl FieldTrait for ForeignKeyField {
-    fn name(&self) -> &str {
-        &self.0.name
+    fn fields(&self) -> Vec<String> {
+        self.0.cols.iter().map(|x| x.from_col.clone()).collect()
     }
 
     async fn get_template(
         &self,
         admin: &Admin,
         parent_value: Option<&Json>,
+        prefix: &str,
         disabled: bool,
     ) -> Result<Box<dyn DynTemplate + Send>> {
         let mut template = self.0.clone();
@@ -150,6 +151,7 @@ impl FieldTrait for ForeignKeyField {
                 });
             }
         };
+        template.name = format!("{}{}", prefix, template.name);
         template.disabled = disabled;
         Ok(Box::new(template))
     }

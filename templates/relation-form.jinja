@@ -1,0 +1,19 @@
+<div class="border-top mt-2 p-1">
+    <h4 class="d-flex justify-content-between">{{ name }}<button type="button"
+            class="btn btn-primary sub-form-add-button" data-target="{{ name }}">add</button></h4>
+</div>
+<div class="ms-4 m-2 sub-form-container">
+    {% for row in rows %}
+    <div id="{{ name }}.{{ loop.index0 }}" class="row border-bottom p-2">
+        {% for field in row.fields %}
+        <div class="col {% if field.is_pkey %}d-none{% endif %}">
+            {{ field.field.dyn_render().unwrap()|safe }}
+        </div>
+        {% endfor %}
+        <div class="d-flex col align-items-center flex-grow-0">
+            <button type="button" class="btn btn-danger sub-form-delete-button" data-target="{{ name }}"
+                data-index="{{ loop.index0 }}">del</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>

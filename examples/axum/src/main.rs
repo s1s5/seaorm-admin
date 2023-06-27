@@ -26,6 +26,9 @@ fn get_initial_author() -> author::ActiveModel {
     ordering = [(Id, Desc)],
     format = format_author,
     initial_value = get_initial_author,
+    form_fields = [
+        seaorm_admin::AdminField::Relation(Box::new(seaorm_admin::Relation::new("posts", post::Relation::Author.def())))
+    ]
 )]
 struct AuthorAdmin;
 

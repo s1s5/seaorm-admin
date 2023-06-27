@@ -56,18 +56,20 @@ impl InputField {
 
 #[async_trait]
 impl FieldTrait for InputField {
-    fn name(&self) -> &str {
-        &self.0.name
+    fn fields(&self) -> Vec<String> {
+        vec![self.0.name.clone()]
     }
 
     async fn get_template(
         &self,
         _admin: &Admin,
         parent_value: Option<&Json>,
+        prefix: &str,
         disabled: bool,
     ) -> Result<Box<dyn DynTemplate + Send>> {
         let value = super::tool::get_value(parent_value, &self.0.name);
         let mut template = self.0.clone();
+        template.name = format!("{}{}", prefix, template.name);
         template.value = value.map(|x| json_force_str(&x));
         template.disabled = disabled;
         Ok(Box::new(template))

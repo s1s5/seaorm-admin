@@ -58,6 +58,7 @@ pub trait ModelAdminTrait {
     fn get_form_fields(&self) -> Vec<AdminField>;
 
     async fn list(&self, conn: &DatabaseConnection, query: &ListQuery) -> Result<(u64, Vec<Json>)>;
+    async fn list_by_key(&self, conn: &DatabaseConnection, key: &Json) -> Result<Vec<Json>>;
 
     async fn get(&self, conn: &DatabaseConnection, key: Json) -> Result<Option<Json>>;
 

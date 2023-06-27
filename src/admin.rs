@@ -180,16 +180,24 @@ impl Admin {
         let primary_keys: HashSet<String> = primary_keys.into_iter().collect();
         for field in base_fields.iter() {
             let disabled = match form_type {
-                FormType::CREATE => {
-                    if primary_keys.contains(field.name()) {
-                        continue;
+                FormType::CREATE => match field {
+                    AdminField::Field(f) => {
+                        if f.fields().into_iter().any(|x| primary_keys.contains(&x)) {
+                            continue;
+                        }
+                        false
                     }
-                    false
-                }
-                FormType::UPDATE => primary_keys.contains(field.name()),
+                    _ => false,
+                },
+                FormType::UPDATE => match field {
+                    AdminField::Field(f) => {
+                        f.fields().into_iter().any(|x| primary_keys.contains(&x))
+                    }
+                    _ => false,
+                },
                 FormType::DELETE => true,
             };
-            let r = field.get_template(self, row, disabled).await?;
+            let r = field.get_template(self, row, "", disabled).await?;
             templates.push(r);
         }
         Ok(templates)
