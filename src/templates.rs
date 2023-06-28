@@ -104,6 +104,7 @@ pub struct RelationFormRowField {
 }
 
 pub struct RelationFormRow {
+    pub is_update: bool,
     pub fields: Vec<RelationFormRowField>,
 }
 
@@ -112,7 +113,7 @@ pub struct RelationFormRow {
 pub struct RelationForm {
     pub name: String,
     // pub nullable: bool,
-    // pub multiple: bool,
+    pub multiple: bool,
     pub template_fields: Vec<Box<dyn DynTemplate + Send>>,
     pub rows: Vec<RelationFormRow>,
 }

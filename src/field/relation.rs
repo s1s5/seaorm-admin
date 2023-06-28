@@ -16,13 +16,15 @@ use std::collections::HashSet;
 pub struct Relation {
     name: String,
     def: RelationDef,
+    multiple: bool,
 }
 
 impl Relation {
-    pub fn new(name: &str, def: RelationDef) -> Self {
+    pub fn new(name: &str, def: RelationDef, multiple: bool) -> Self {
         Relation {
             name: name.into(),
             def,
+            multiple,
         }
     }
 }
@@ -88,8 +90,37 @@ impl RelationTrait for Relation {
                             .await?,
                     });
                 }
-                rows.push(RelationFormRow { fields: fv });
+                rows.push(RelationFormRow {
+                    is_update: true,
+                    fields: fv,
+                });
             }
+        }
+        if (!self.multiple) && rows.len() == 0 {
+            let row_prefix = format!("{}{}.{}.", prefix, self.name, 0,);
+            let mut fv = vec![];
+            for f in fields.iter() {
+                match f {
+                    AdminField::Field(x) => {
+                        if x.fields().into_iter().any(|i| cols.contains(&i)) {
+                            continue;
+                        }
+                        if x.fields().into_iter().any(|i| pkeys.contains(&i)) {
+                            continue;
+                        }
+                    }
+                    _ => {}
+                };
+
+                fv.push(RelationFormRowField {
+                    is_pkey: false,
+                    field: f.get_template(admin, None, &row_prefix, disabled).await?,
+                });
+            }
+            rows.push(RelationFormRow {
+                is_update: false,
+                fields: fv,
+            })
         }
 
         let mut template_fields = vec![];
@@ -118,6 +149,7 @@ impl RelationTrait for Relation {
             name: format!("{}{}", prefix, self.name),
             template_fields,
             rows,
+            multiple: self.multiple,
         }))
     }
 
