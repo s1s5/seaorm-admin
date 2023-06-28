@@ -1,6 +1,7 @@
 <label for="{{ name }}-id" class="form-label">{{ label }}</label>
 {% for col in cols %}
-<input type="hidden" id="{{ col.from_col }}-id" name="{{ col.from_col }}" value="{{ col.value }}"/>
+<input type="hidden" id="{{ col.from_col }}-id" name="{{ col.from_col }}"
+       value="{% for v in col.value %}{% if loop.index0 != 0 %},{% endif %}{{ v }}{% endfor %}"/>
 {% endfor %}
 {% if true ~%}
 <select

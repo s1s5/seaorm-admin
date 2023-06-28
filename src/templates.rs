@@ -80,7 +80,7 @@ pub struct AdminFormAutoCompleteChoice {
 
 #[derive(Debug, Clone)]
 pub struct AdminFormAutoCompleteCol {
-    pub value: String,
+    pub value: Vec<String>,
     pub from_col: String,
     pub to_col: String,
 }

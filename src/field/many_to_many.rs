@@ -3,7 +3,8 @@ use super::{
     foreign_key_field::{extract_table_name, identity_to_vec_string},
     RelationTrait,
 };
-use crate::json_extract_prefixed;
+use crate::templates::AdminFormAutoComplete;
+use crate::{extract_cols_from_relation_def, json_extract_prefixed};
 use crate::{
     templates::{RelationForm, RelationFormRow, RelationFormRowField},
     Admin, Json, Result,
@@ -38,7 +39,19 @@ impl RelationTrait for ManyToMany {
         prefix: &str,
         disabled: bool,
     ) -> Result<Box<dyn DynTemplate + Send>> {
-        Err(anyhow::anyhow!("todo"))
+        println!("fr:{:?} to:{:?}", self.from_def, self.to_def);
+
+        Ok(Box::new(AdminFormAutoComplete {
+            name: self.name.clone(),
+            label: self.name.clone(),
+            choices: vec![],
+            help_text: None,
+            disabled: disabled,
+            to_table: extract_table_name(&self.to_def.to_tbl)?,
+            cols: extract_cols_from_relation_def(&self.to_def)?,
+            nullable: true,
+            multiple: true,
+        }))
     }
 
     async fn commit(&self, admin: &Admin, parent_value: &Json) -> Result<Json> {

@@ -22,6 +22,7 @@ pub use foreign_key_field::{
     extract_cols_from_relation_def, relation_def_is_nullable, ForeignKeyField,
 };
 pub use input_field::InputField;
+pub use many_to_many::ManyToMany;
 pub use relation::Relation;
 pub use textarea_field::TextareaField;
 pub use timestamp_field::TimestampField;

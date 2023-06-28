@@ -65,7 +65,7 @@ pub fn extract_cols_from_relation_def(
         .into_iter()
         .zip(to.into_iter())
         .map(|(f, t)| templates::AdminFormAutoCompleteCol {
-            value: "".to_string(),
+            value: vec![],
             from_col: f,
             to_col: t,
         })
@@ -136,9 +136,9 @@ impl FieldTrait for ForeignKeyField {
                 .cols
                 .iter()
                 .map(|x| templates::AdminFormAutoCompleteCol {
-                    value: super::tool::get_value(Some(parent_value), &x.from_col)
+                    value: vec![super::tool::get_value(Some(parent_value), &x.from_col)
                         .map(|x| json_force_str(x))
-                        .unwrap_or("".to_string()),
+                        .unwrap_or("".to_string())],
                     from_col: x.from_col.clone(),
                     to_col: x.to_col.clone(),
                 })
