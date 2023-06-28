@@ -167,7 +167,7 @@ impl RelationTrait for Relation {
             .get_model(&extract_table_name(&self.def.from_tbl)?)
             .ok_or(anyhow::anyhow!("table not found"))?;
 
-        for (i, op) in state.split(",").enumerate() {
+        for (i, op) in state.split(",").filter(|x| (*x).len() > 0).enumerate() {
             let mut data = json_extract_prefixed(parent_value, &format!("{}.{}.", self.name, i))?;
             match &op {
                 &"C" => {
