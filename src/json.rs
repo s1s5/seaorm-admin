@@ -112,6 +112,20 @@ pub fn json_convert_vec_to_json(
     }))
 }
 
+// ----------------------------------------------------------------------------
+pub fn json_extract_prefixed(value: &Json, prefix: &str) -> Result<Json> {
+    let o = value
+        .as_object()
+        .ok_or(anyhow::anyhow!("value must be Object"))?;
+
+    Ok(Json::Object(
+        o.iter()
+            .filter(|(k, _v)| k.starts_with(prefix))
+            .map(|(k, v)| (k[prefix.len()..].to_string(), v.clone()))
+            .collect(),
+    ))
+}
+
 // ============================================================================
 macro_rules! sanitize_value_check_empty {
     ($ident: ident, $col: expr, $v: expr) => {

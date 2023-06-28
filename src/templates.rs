@@ -113,6 +113,7 @@ pub struct RelationForm {
     pub name: String,
     // pub nullable: bool,
     // pub multiple: bool,
+    pub template_fields: Vec<Box<dyn DynTemplate + Send>>,
     pub rows: Vec<RelationFormRow>,
 }
 

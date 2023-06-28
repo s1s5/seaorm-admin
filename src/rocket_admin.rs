@@ -177,10 +177,7 @@ pub async fn create_model<'r>(
 ) -> Result<(Status, content::RawJson<String>), Status> {
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
-    Ok(return_json_object(
-        model,
-        model.insert(&admin.get_connection(), data).await,
-    ))
+    Ok(return_json_object(model, admin.create(model, &data).await))
 }
 
 #[get("/<model>/update/<id>")]
@@ -192,7 +189,7 @@ pub async fn get_update_template(
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
     let row = model
-        .get(&admin.get_connection(), key)
+        .get(&admin.get_connection(), &key)
         .await
         .map_err(|_x| Status::InternalServerError)?
         .ok_or(Status::NotFound)?;
@@ -216,10 +213,7 @@ pub async fn update_model(
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let data = json_overwrite_key(&data, &key).map_err(|_x| Status::InternalServerError)?;
-    Ok(return_json_object(
-        model,
-        model.update(&admin.get_connection(), data).await,
-    ))
+    Ok(return_json_object(model, admin.update(model, &data).await))
 }
 
 #[get("/<model>/delete/<id>")]
@@ -231,7 +225,7 @@ pub async fn get_delete_template(
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
     let row = model
-        .get(&admin.get_connection(), key)
+        .get(&admin.get_connection(), &key)
         .await
         .map_err(|_x| Status::InternalServerError)?
         .ok_or(Status::NotFound)?;
@@ -256,9 +250,7 @@ pub async fn delete_model(
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let data = json_overwrite_key(&data, &key).map_err(|_x| Status::InternalServerError)?;
 
-    Ok(return_json(
-        model.delete(&admin.get_connection(), data).await,
-    ))
+    Ok(return_json(admin.delete(model, &data).await))
 }
 
 pub fn get_admin_routes() -> Vec<Route> {

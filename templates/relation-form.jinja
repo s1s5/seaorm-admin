@@ -2,7 +2,9 @@
     <h4 class="d-flex justify-content-between">{{ name }}<button type="button"
             class="btn btn-primary sub-form-add-button" data-target="{{ name }}">add</button></h4>
 </div>
-<div class="ms-4 m-2 sub-form-container">
+<div id="{{ name }}-container" class="ms-4 m-2 sub-form-container">
+    <input type="hidden" id="{{ name }}.state-id" name="{{ name }}.state"
+        value="{% for row in rows %}{% if loop.index0 != 0 %},{% endif %}U{% endfor %}" />
     {% for row in rows %}
     <div id="{{ name }}.{{ loop.index0 }}" class="row border-bottom p-2">
         {% for field in row.fields %}
@@ -16,4 +18,15 @@
         </div>
     </div>
     {% endfor %}
+    <div id="{{ name }}-template" class="d-none row border-bottom p-2">
+        {% for field in template_fields %}
+        <div class="col">
+            {{ field.dyn_render().unwrap()|safe }}
+        </div>
+        {% endfor %}
+        <div class="d-flex col align-items-center flex-grow-0">
+            <button type="button" class="btn btn-danger sub-form-delete-button"
+                data-target="{{ name }}">del</button>
+        </div>
+    </div>
 </div>

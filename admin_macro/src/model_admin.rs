@@ -330,19 +330,19 @@ impl ModelAdminExpander {
                     #ident::list_by_key_impl(conn, key).await
                 }
 
-                async fn get(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, key: seaorm_admin::Json) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
+                async fn get(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, key: &seaorm_admin::Json) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
                     #ident::get_impl(conn, key).await
                 }
 
-                async fn insert(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
+                async fn insert(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: &seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
                     #ident::insert_impl(conn, value).await
                 }
 
-                async fn update(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
+                async fn update(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: &seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
                     #ident::update_impl(conn, value).await
                 }
 
-                async fn delete(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<u64> {
+                async fn delete(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: &seaorm_admin::Json) -> seaorm_admin::Result<u64> {
                     #ident::delete_impl(conn, value).await
                 }
             }
@@ -556,7 +556,7 @@ impl ModelAdminExpander {
             impl #ident {
             async fn get_impl(
                 conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                key: seaorm_admin::Json
+                key: &seaorm_admin::Json
             ) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
                 use seaorm_admin::sea_orm::EntityTrait;
 
@@ -564,7 +564,7 @@ impl ModelAdminExpander {
                 let qs = #module::Entity::find();
                 let qs = {
                     let mut fm = #module::ActiveModel { ..Default::default() };
-                    seaorm_admin::set_from_json(&mut fm, &fields, &key)?;
+                    seaorm_admin::set_from_json(&mut fm, &fields, key)?;
                     seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
                 };
                 Ok(if let Some(model) = qs.one(conn).await? {
@@ -585,13 +585,13 @@ impl ModelAdminExpander {
             impl #ident {
                 async fn insert_impl(
                     conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                    value: seaorm_admin::Json
+                    value: &seaorm_admin::Json
                 ) -> seaorm_admin::Result<seaorm_admin::Json> {
                     use seaorm_admin::sea_orm::{EntityTrait, ActiveModelTrait, TryIntoModel};
 
                     let fields = #ident::get_fields();
                     let mut model = #ident::get_initial_value();
-                    seaorm_admin::set_from_json(&mut model, &fields, &value)?;
+                    seaorm_admin::set_from_json(&mut model, &fields, value)?;
                     let saved: #module::Model = model.insert(conn).await?.try_into_model()?;
                     seaorm_admin::to_json(&saved, &fields)
                 }
@@ -607,13 +607,13 @@ impl ModelAdminExpander {
             impl #ident {
                 async fn update_impl(
                     conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                    value: seaorm_admin::Json
+                    value: &seaorm_admin::Json
                 ) -> seaorm_admin::Result<seaorm_admin::Json> {
                     use seaorm_admin::sea_orm::{TryIntoModel, ActiveModelTrait, EntityTrait};
 
                     let fields = #ident::get_fields();
                     let mut model = #module::ActiveModel { ..Default::default() };
-                    seaorm_admin::set_from_json(&mut model, &fields, &value)?;
+                    seaorm_admin::set_from_json(&mut model, &fields, value)?;
                     let saved: #module::Model = model.save(conn).await?.try_into_model().unwrap();
                     seaorm_admin::to_json(&saved, &fields)
                 }
@@ -629,14 +629,14 @@ impl ModelAdminExpander {
             impl #ident {
             async fn delete_impl(
                 conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                value: seaorm_admin::Json
+                value: &seaorm_admin::Json
             ) -> seaorm_admin::Result<u64> {
                 use seaorm_admin::sea_orm::{EntityTrait, ModelTrait};
 
                 let qs = #module::Entity::find();
                 let qs = {
                     let mut fm = #module::ActiveModel { ..Default::default() };
-                    seaorm_admin::set_from_json(&mut fm, &#ident::get_fields(), &value)?;
+                    seaorm_admin::set_from_json(&mut fm, &#ident::get_fields(), value)?;
                     seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
                 };
                 Ok(if let Some(model) = qs.one(conn).await? {

@@ -1,6 +1,8 @@
+use crate::json_overwrite_key;
+
 use super::{templates, AdminField, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, TransactionTrait};
 use std::{
     collections::{HashMap, HashSet},
     ops::Deref,
@@ -248,6 +250,60 @@ impl Admin {
                 )
                 .await?,
         })
+    }
+
+    async fn handle_relation(
+        &self,
+        model: &Box<dyn ModelAdminTrait + Send + Sync>,
+        data: &Json,
+    ) -> Result<()> {
+        for field in model.get_form_fields() {
+            match field {
+                AdminField::Relation(rel) => rel.commit(self, data).await?,
+                _ => Json::Null,
+            };
+        }
+        Ok(())
+    }
+
+    pub async fn create(
+        &self,
+        model: &Box<dyn ModelAdminTrait + Send + Sync>,
+        data: &Json,
+    ) -> Result<Json> {
+        let txn = self.get_connection().begin().await?;
+
+        let r = model.insert(&self.get_connection(), data).await?;
+        let data = json_overwrite_key(data, &r)?;
+
+        self.handle_relation(model, &data).await?;
+
+        txn.commit().await?;
+        Ok(data)
+    }
+
+    pub async fn update(
+        &self,
+        model: &Box<dyn ModelAdminTrait + Send + Sync>,
+        data: &Json,
+    ) -> Result<Json> {
+        let txn = self.get_connection().begin().await?;
+
+        let r = model.update(&self.get_connection(), data).await?;
+        let data = json_overwrite_key(data, &r)?;
+
+        self.handle_relation(model, &data).await?;
+
+        txn.commit().await?;
+        Ok(data)
+    }
+
+    pub async fn delete(
+        &self,
+        model: &Box<dyn ModelAdminTrait + Send + Sync>,
+        data: &Json,
+    ) -> Result<u64> {
+        model.delete(&self.get_connection(), &data).await
     }
 
     pub async fn get_delete_template(

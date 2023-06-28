@@ -129,7 +129,7 @@ impl FieldTrait for ForeignKeyField {
                 .map(|x| (x.0, x.1.unwrap().clone()))
                 .collect();
             let tr = tm
-                .get(&admin.get_connection(), Json::Object(m))
+                .get(&admin.get_connection(), &Json::Object(m))
                 .await
                 .unwrap_or(None);
             template.cols = template

@@ -60,11 +60,11 @@ pub trait ModelAdminTrait {
     async fn list(&self, conn: &DatabaseConnection, query: &ListQuery) -> Result<(u64, Vec<Json>)>;
     async fn list_by_key(&self, conn: &DatabaseConnection, key: &Json) -> Result<Vec<Json>>;
 
-    async fn get(&self, conn: &DatabaseConnection, key: Json) -> Result<Option<Json>>;
+    async fn get(&self, conn: &DatabaseConnection, key: &Json) -> Result<Option<Json>>;
 
-    async fn insert(&self, conn: &DatabaseConnection, value: Json) -> Result<Json>;
+    async fn insert(&self, conn: &DatabaseConnection, value: &Json) -> Result<Json>;
 
-    async fn update(&self, conn: &DatabaseConnection, value: Json) -> Result<Json>;
+    async fn update(&self, conn: &DatabaseConnection, value: &Json) -> Result<Json>;
 
-    async fn delete(&self, conn: &DatabaseConnection, value: Json) -> Result<u64>;
+    async fn delete(&self, conn: &DatabaseConnection, value: &Json) -> Result<u64>;
 }

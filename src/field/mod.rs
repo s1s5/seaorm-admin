@@ -66,4 +66,6 @@ pub trait RelationTrait {
         prefix: &str,
         disabled: bool,
     ) -> Result<Box<dyn DynTemplate + Send>>;
+
+    async fn commit(&self, admin: &Admin, parent_value: &Json) -> Result<Json>;
 }
