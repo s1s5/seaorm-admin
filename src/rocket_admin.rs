@@ -1,3 +1,5 @@
+use crate::create_cond_from_json;
+
 use super::{json_overwrite_key, templates, Admin, Json, ModelAdminTrait};
 use askama::Template;
 use rocket::request::Request;
@@ -188,8 +190,10 @@ pub async fn get_update_template(
 ) -> Result<content::RawHtml<String>, Status> {
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
+        .map_err(|_x| Status::BadRequest)?;
     let row = model
-        .get(&admin.get_connection(), &key)
+        .get(&admin.get_connection(), &cond)
         .await
         .map_err(|_x| Status::InternalServerError)?
         .ok_or(Status::NotFound)?;
@@ -224,8 +228,10 @@ pub async fn get_delete_template(
 ) -> Result<content::RawHtml<String>, Status> {
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
+        .map_err(|_x| Status::BadRequest)?;
     let row = model
-        .get(&admin.get_connection(), &key)
+        .get(&admin.get_connection(), &cond)
         .await
         .map_err(|_x| Status::InternalServerError)?
         .ok_or(Status::NotFound)?;

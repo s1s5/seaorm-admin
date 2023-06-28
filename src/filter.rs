@@ -1,8 +1,7 @@
-use crate::Result;
+use crate::{Json, ListParam, ListQuery, Result};
+use sea_orm::sea_query::{Alias, Condition, Expr, SeaRc};
+use sea_orm::{ColumnDef, DynIden, EntityTrait, Iden, QueryOrder, Select};
 use std::collections::HashMap;
-// use itertools::Itertools;
-use sea_orm::sea_query::{Condition, Expr};
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, Iden, QueryFilter, QueryOrder, Select};
 
 // enum ConditionOp {
 //     Eq,
@@ -21,6 +20,30 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, Iden, QueryFilter, Que
 //         ConditionOp::Eq => Expr::col(*col).eq(value).into_condition(),
 //     }
 // }
+pub fn list_query_to_list_param(
+    query: &ListQuery,
+    columns: &Vec<(String, ColumnDef)>,
+) -> Result<ListParam> {
+    let mut cond = Condition::all();
+    let c = create_cond_from_hash_map(
+        &columns.iter().map(|x| x.0.clone()).collect(),
+        &query.filter,
+    )?;
+    if !c.is_empty() {
+        cond = cond.add(c);
+    }
+    let c = create_cond_from_search_queries(columns, &query.queries)?;
+    if !c.is_empty() {
+        cond = cond.add(c);
+    }
+
+    Ok(ListParam {
+        cond: cond,
+        ordering: query.ordering.clone(),
+        offset: Some(query.offset),
+        limit: Some(query.limit),
+    })
+}
 
 pub fn set_ordering<E>(
     qs: Select<E>,
@@ -53,73 +76,80 @@ where
     set_ordering(qs, &ordering)
 }
 
-pub fn filter_by_hash_map<E>(
-    qs: Select<E>,
-    columns: &Vec<<E as EntityTrait>::Column>,
+pub fn create_cond_from_hash_map(
+    columns: &Vec<String>,
     filter: &HashMap<String, Vec<String>>,
-) -> Result<Select<E>>
-where
-    E: EntityTrait,
-{
+) -> Result<Condition> {
     let mut cond = Condition::all();
 
     for col in columns.iter() {
         // TODO: support "like", "gt", etc..
-        if let Some(queries) = filter.get(&col.to_string()) {
+        if let Some(queries) = filter.get(col) {
             let mut pcond = Condition::any();
             for value in queries {
-                pcond = pcond.add(Expr::col(*col).eq(value.to_string()));
+                let col: DynIden = SeaRc::new(Alias::new(col));
+                pcond = pcond.add(Expr::col(col).eq(value.clone()));
             }
             cond = cond.add(pcond);
         }
     }
 
-    Ok(if !cond.is_empty() {
-        qs.filter(cond)
-    } else {
-        qs
-    })
+    Ok(cond)
 }
 
-pub fn filter_by_columns<M>(
-    qs: Select<<M as ActiveModelTrait>::Entity>,
-    columns: &Vec<<<M as ActiveModelTrait>::Entity as EntityTrait>::Column>,
-    filter: &M,
+pub fn create_cond_from_json(
+    columns: &Vec<String>,
+    filter: &Json,
     check_exists: bool,
-) -> Result<Select<<M as ActiveModelTrait>::Entity>>
-where
-    M: ActiveModelTrait,
-{
-    let mut qs = qs;
+) -> Result<Condition> {
+    let filter = filter
+        .as_object()
+        .ok_or(anyhow::anyhow!("filter must be object"))?;
+    let mut cond = Condition::all();
     for col in columns.iter() {
-        if let sea_orm::ActiveValue::Set(value) = filter.get(*col) {
-            qs = qs.filter(col.eq(value));
+        if let Some(value) = filter.get(col) {
+            let col: DynIden = SeaRc::new(Alias::new(col));
+            match value {
+                Json::Null => {}
+                Json::Bool(b) => {
+                    cond = cond.add(Expr::col(col).eq(*b));
+                }
+                serde_json::Value::Number(n) => {
+                    if n.is_f64() {
+                        cond = cond.add(Expr::col(col).eq(n.as_f64()));
+                    } else {
+                        cond = cond.add(Expr::col(col).eq(n.as_i64()));
+                    }
+                }
+                serde_json::Value::String(s) => {
+                    cond = cond.add(Expr::col(col).eq(s));
+                }
+                _ => Err(anyhow::anyhow!("Unsupport value type"))?,
+            }
         } else if check_exists {
             return Err(anyhow::anyhow!("key not found"));
         }
     }
 
-    Ok(qs)
+    Ok(cond)
 }
 
-pub fn search_by_queries<E>(
-    qs: Select<E>,
-    columns: &Vec<<E as EntityTrait>::Column>,
+pub fn create_cond_from_search_queries(
+    columns: &Vec<(String, ColumnDef)>,
     queries: &Vec<String>,
-) -> Result<Select<E>>
-where
-    E: EntityTrait,
-{
+) -> Result<Condition> {
     let mut cond = Condition::any();
-    for col in columns {
-        match col.def().get_column_type() {
+    for (col_name, col_def) in columns {
+        let col: DynIden = SeaRc::new(Alias::new(col_name));
+        match col_def.get_column_type() {
             sea_orm::ColumnType::Char(_)
             | sea_orm::ColumnType::String(_)
             | sea_orm::ColumnType::Text
             | sea_orm::ColumnType::Uuid => {
                 let mut pcond = Condition::all();
                 for value in queries {
-                    pcond = pcond.add(Expr::col(*col).like(format!("%{}%", value.to_string())));
+                    pcond =
+                        pcond.add(Expr::col(col.clone()).like(format!("%{}%", value.to_string())));
                 }
                 if !pcond.is_empty() {
                     cond = cond.add(pcond);
@@ -140,7 +170,7 @@ where
                     .filter(|x| x.is_ok())
                     .map(|x| x.unwrap())
                 {
-                    pcond = pcond.add(Expr::col(*col).eq(value));
+                    pcond = pcond.add(Expr::col(col.clone()).eq(value));
                 }
                 if !pcond.is_empty() {
                     cond = cond.add(pcond);
@@ -150,9 +180,5 @@ where
         }
     }
 
-    Ok(if !cond.is_empty() {
-        qs.filter(cond)
-    } else {
-        qs
-    })
+    Ok(cond)
 }

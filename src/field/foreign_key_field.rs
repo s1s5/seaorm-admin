@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::FieldTrait;
 use crate::{
-    json_force_str,
+    create_cond_from_json, json_force_str,
     templates::{self, AdminFormAutoComplete},
     Admin, CustomError, Json, Result,
 };
@@ -128,10 +128,12 @@ impl FieldTrait for ForeignKeyField {
                 .filter(|x| x.1.filter(|x| !x.is_null()).is_some())
                 .map(|x| (x.0, x.1.unwrap().clone()))
                 .collect();
-            let tr = tm
-                .get(&admin.get_connection(), &Json::Object(m))
-                .await
-                .unwrap_or(None);
+            let cond = create_cond_from_json(
+                &tm.get_columns().iter().map(|x| x.0.clone()).collect(),
+                &Json::Object(m),
+                false,
+            )?;
+            let tr = tm.get(&admin.get_connection(), &cond).await.unwrap_or(None);
             template.cols = template
                 .cols
                 .iter()

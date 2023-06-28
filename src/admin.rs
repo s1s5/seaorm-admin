@@ -1,4 +1,4 @@
-use crate::json_overwrite_key;
+use crate::{create_cond_from_json, json_overwrite_key, list_query_to_list_param};
 
 use super::{templates, AdminField, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
@@ -105,7 +105,8 @@ impl Admin {
         query_param: &HashMap<String, Vec<String>>,
     ) -> Result<Json> {
         let query = super::parse_query(query_param, model.get_list_per_page())?;
-        let (total, object_list) = model.list(&self.get_connection(), &query).await?;
+        let param = list_query_to_list_param(&query, &model.get_columns())?;
+        let (total, object_list) = model.list(&self.get_connection(), &param).await?;
         super::json_convert_vec_to_json(model, total, object_list)
     }
 
@@ -115,7 +116,8 @@ impl Admin {
         query_param: &HashMap<String, Vec<String>>,
     ) -> Result<templates::AdminList> {
         let query = super::parse_query(query_param, model.get_list_per_page())?;
-        let (count, object_list) = model.list(&self.get_connection(), &query).await?;
+        let param = list_query_to_list_param(&query, &model.get_columns())?;
+        let (count, object_list) = model.list(&self.get_connection(), &param).await?;
         let list_per_page = model.get_list_per_page();
         let num_pages = (count + list_per_page - 1) / list_per_page;
         let current_page = query.offset / list_per_page;
@@ -303,7 +305,8 @@ impl Admin {
         model: &Box<dyn ModelAdminTrait + Send + Sync>,
         data: &Json,
     ) -> Result<u64> {
-        model.delete(&self.get_connection(), &data).await
+        let cond = create_cond_from_json(&model.get_primary_keys(), &data, true)?;
+        model.delete(&self.get_connection(), &cond).await
     }
 
     pub async fn get_delete_template(

@@ -1,3 +1,5 @@
+use crate::create_cond_from_json;
+
 use super::{json_overwrite_key, templates, Admin, ModelAdminTrait};
 use askama::Template;
 use axum::{
@@ -186,8 +188,10 @@ async fn get_update_template(
     let key = model
         .key_to_json(&id)
         .map_err(|_x| StatusCode::BAD_REQUEST)?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
+        .map_err(|_x| StatusCode::BAD_REQUEST)?;
     let row = model
-        .get(&admin.get_connection(), &key)
+        .get(&admin.get_connection(), &cond)
         .await
         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
@@ -221,8 +225,10 @@ async fn get_delete_template(
     let key = model
         .key_to_json(&id)
         .map_err(|_x| StatusCode::BAD_REQUEST)?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
+        .map_err(|_x| StatusCode::BAD_REQUEST)?;
     let row = model
-        .get(&admin.get_connection(), &key)
+        .get(&admin.get_connection(), &cond)
         .await
         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;

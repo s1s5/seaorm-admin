@@ -3,7 +3,7 @@ use super::{
     foreign_key_field::{extract_table_name, identity_to_vec_string},
     RelationTrait,
 };
-use crate::json_extract_prefixed;
+use crate::{create_cond_from_json, json_extract_prefixed};
 use crate::{
     templates::{RelationForm, RelationFormRow, RelationFormRowField},
     Admin, Json, Result,
@@ -57,8 +57,22 @@ impl RelationTrait for Relation {
                 .map(|x| (x.0, x.1.unwrap().clone()))
                 .collect();
 
-            let jv_list = model
-                .list_by_key(&admin.get_connection(), &Json::Object(m))
+            let cond = create_cond_from_json(
+                &model.get_columns().iter().map(|x| x.0.clone()).collect(),
+                &Json::Object(m),
+                false,
+            )?;
+
+            let (_, jv_list) = model
+                .list(
+                    &admin.get_connection(),
+                    &crate::ListParam {
+                        cond: cond,
+                        ordering: vec![],
+                        offset: None,
+                        limit: None,
+                    },
+                )
                 .await?;
 
             for (i, jv) in jv_list.iter().enumerate() {

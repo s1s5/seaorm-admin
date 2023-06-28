@@ -1,18 +1,10 @@
-use super::AdminField;
-use super::{
-    foreign_key_field::{extract_table_name, identity_to_vec_string},
-    RelationTrait,
-};
+use super::{foreign_key_field::extract_table_name, RelationTrait};
+use crate::extract_cols_from_relation_def;
 use crate::templates::AdminFormAutoComplete;
-use crate::{extract_cols_from_relation_def, json_extract_prefixed};
-use crate::{
-    templates::{RelationForm, RelationFormRow, RelationFormRowField},
-    Admin, Json, Result,
-};
+use crate::{Admin, Json, Result};
 use askama::DynTemplate;
 use async_trait::async_trait;
 use sea_orm::RelationDef;
-use std::collections::HashSet;
 
 pub struct ManyToMany {
     name: String,
@@ -34,9 +26,9 @@ impl ManyToMany {
 impl RelationTrait for ManyToMany {
     async fn get_template(
         &self,
-        admin: &Admin,
-        parent_value: Option<&Json>,
-        prefix: &str,
+        _admin: &Admin,
+        _parent_value: Option<&Json>,
+        _prefix: &str,
         disabled: bool,
     ) -> Result<Box<dyn DynTemplate + Send>> {
         println!("fr:{:?} to:{:?}", self.from_def, self.to_def);
@@ -54,7 +46,7 @@ impl RelationTrait for ManyToMany {
         }))
     }
 
-    async fn commit(&self, admin: &Admin, parent_value: &Json) -> Result<Json> {
+    async fn commit(&self, _admin: &Admin, _parent_value: &Json) -> Result<Json> {
         Err(anyhow::anyhow!("todo"))
     }
 }
