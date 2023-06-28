@@ -75,6 +75,7 @@ pub struct AdminFormDatetimeInput {
 pub struct AdminFormAutoCompleteChoice {
     pub value: String,
     pub label: String,
+    pub json_str: String,
 }
 
 #[derive(Debug, Clone)]
@@ -89,7 +90,7 @@ pub struct AdminFormAutoCompleteCol {
 pub struct AdminFormAutoComplete {
     pub name: String,
     pub label: String,
-    pub choice: Option<AdminFormAutoCompleteChoice>,
+    pub choices: Vec<AdminFormAutoCompleteChoice>,
     pub help_text: Option<String>,
     pub disabled: bool,
     pub to_table: String,

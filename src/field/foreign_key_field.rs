@@ -91,7 +91,7 @@ impl ForeignKeyField {
         Ok(ForeignKeyField(AdminFormAutoComplete {
             name: relation_def_to_form_name(rel_def)?,
             label: relation_def_to_form_label(rel_def)?,
-            choice: None,
+            choices: vec![],
             help_text: None,
             disabled: false,
             to_table: extract_table_name(&rel_def.to_tbl)?,
@@ -145,10 +145,11 @@ impl FieldTrait for ForeignKeyField {
                 .collect();
 
             if let Some(tr) = tr {
-                template.choice = Some(templates::AdminFormAutoCompleteChoice {
+                template.choices = vec![templates::AdminFormAutoCompleteChoice {
                     label: tm.to_str(&tr)?,
                     value: tm.json_to_key(&tr)?,
-                });
+                    json_str: serde_json::to_string(&tr)?,
+                }];
             }
         };
         template.name = format!("{}{}", prefix, template.name);

@@ -20,28 +20,19 @@ async function get_choices(to_table, query, nullable) {
     }
   );
   let object_list = await res.json();
-  return (
-    nullable
-      ? [
-          {
-            label: "&lt; clear value &gt;",
-            value: "",
-          },
-        ]
-      : []
-  ).concat(
-    object_list.data.map((e) => ({
-      label: e.label,
-      value: e.key,
-      customProperties: {
-        data: e.data,
-      },
-    }))
-  );
+  return object_list.data.map((e) => ({
+    label: e.label,
+    value: e.key,
+    customProperties: {
+      data: e.data,
+    },
+  }));
 }
 
 window.addEventListener("load", (event) => {
   document.querySelectorAll(".auto-complete").forEach(function (e) {
+    // let memory = {};
+    console.log(e.attributes["multiple"]);
     let to_table = e.attributes["data-to_table"].value;
     let nullable =
       e.attributes["data-nullable"] == null
@@ -59,6 +50,9 @@ window.addEventListener("load", (event) => {
       choices: [],
       shouldSort: false,
       searchChoices: false,
+
+      remoteItems: true,
+      removeItemButton: true,
     });
     (async () => {
       choices.setChoices(
@@ -79,10 +73,23 @@ window.addEventListener("load", (event) => {
     }, 100);
 
     e.addEventListener("search", on_search, false);
+    e.addEventListener("removeItem", function (event) {
+      // console.log("remove:", event);
+      let data = event.detail.customProperties.data;
+      relations.forEach((rel) => {
+        let target_el = document.querySelector(`#${rel[1]}-id`);
+        target_el.value = target_el.value
+          .split(",")
+          .filter((i) => !!i)
+          .filter((i) => i != [data[rel[0]]])
+          .join(",");
+      });
+    });
 
     e.addEventListener(
       "addItem",
       function (event) {
+        // console.log("addItem", event);
         if (event.detail.customProperties == null) {
           relations.forEach((rel) => {
             let target_el = document.querySelector(`#${rel[1]}-id`);
@@ -90,9 +97,14 @@ window.addEventListener("load", (event) => {
           });
         } else {
           let data = event.detail.customProperties.data;
+          // memory[event.detail.value] = data;
           relations.forEach((rel) => {
             let target_el = document.querySelector(`#${rel[1]}-id`);
-            target_el.value = data[rel[0]];
+            target_el.value = target_el.value
+              .split(",")
+              .filter((i) => !!i)
+              .concat([data[rel[0]]])
+              .join(",");
           });
         }
       },
