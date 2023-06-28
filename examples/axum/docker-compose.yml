@@ -22,6 +22,7 @@ services:
 
   migration:
     image: s1s5/rust-dev
+    command: ["cargo", "run"]
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/axum
     volumes:
