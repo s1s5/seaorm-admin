@@ -1,5 +1,5 @@
 use axum::{extract::Extension, Router};
-use entity::{author, post, test_model};
+use entity::{author, post, tag, tag_relation, test_model};
 use sea_orm::Set;
 use seaorm_admin::{enum_field, Admin, ModelAdmin};
 use std::net::SocketAddr;
@@ -27,7 +27,8 @@ fn get_initial_author() -> author::ActiveModel {
     format = format_author,
     initial_value = get_initial_author,
     form_fields = [
-        seaorm_admin::AdminField::Relation(Box::new(seaorm_admin::Relation::new("posts", post::Relation::Author.def(), true)))
+        seaorm_admin::AdminField::Relation(Box::new(seaorm_admin::Relation::new("posts", post::Relation::Author.def(), true))),
+        seaorm_admin::AdminField::Relation(Box::new(seaorm_admin::ManyToMany::new("tags", tag_relation::Relation::Author.def(), tag_relation::Relation::Tag.def())))
     ]
 )]
 struct AuthorAdmin;
@@ -45,6 +46,14 @@ struct PostAdmin;
 )]
 struct TestAdmin;
 
+#[derive(ModelAdmin, Default)]
+#[model_admin(module = tag)]
+struct TagAdmin;
+
+#[derive(ModelAdmin, Default)]
+#[model_admin(module = tag_relation)]
+struct TagRelationAdmin;
+
 #[tokio::main]
 async fn main() -> std::result::Result<(), hyper::Error> {
     env_logger::init();
@@ -59,6 +68,8 @@ async fn main() -> std::result::Result<(), hyper::Error> {
     admin.add_model(AuthorAdmin);
     admin.add_model(PostAdmin);
     admin.add_model(TestAdmin);
+    admin.add_model(TagAdmin);
+    admin.add_model(TagRelationAdmin);
 
     let app = Router::new()
         .nest(
