@@ -176,7 +176,7 @@ async fn create_model<'r>(
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     Ok(return_json_object(
         model,
-        admin.create(model, &data.0).await,
+        admin.create(model, &data.0, None).await,
     ))
 }
 
@@ -214,7 +214,10 @@ async fn update_model(
         .key_to_json(&id)
         .map_err(|_x| StatusCode::BAD_REQUEST)?;
     let data = json_overwrite_key(&data.0, &key).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok(return_json_object(model, admin.update(model, &data).await))
+    Ok(return_json_object(
+        model,
+        admin.update(model, &data, None).await,
+    ))
 }
 
 async fn get_delete_template(
@@ -253,7 +256,7 @@ async fn delete_model(
 
     let data = json_overwrite_key(&data.0, &key).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(return_json(admin.delete(model, &data).await))
+    Ok(return_json(admin.delete(model, &data, None).await))
 }
 
 pub fn get_router() -> Router {

@@ -10,7 +10,7 @@ use crate::{
 };
 use askama::DynTemplate;
 use async_trait::async_trait;
-use sea_orm::RelationDef;
+use sea_orm::{DatabaseTransaction, RelationDef};
 use std::collections::HashSet;
 
 pub struct Relation {
@@ -167,7 +167,12 @@ impl RelationTrait for Relation {
         }))
     }
 
-    async fn commit(&self, admin: &Admin, parent_value: &Json) -> Result<Json> {
+    async fn commit(
+        &self,
+        admin: &Admin,
+        parent_value: &Json,
+        txn: &DatabaseTransaction,
+    ) -> Result<Json> {
         let parent_object = parent_value
             .as_object()
             .ok_or(anyhow::anyhow!("invalid json"))?;
@@ -195,15 +200,15 @@ impl RelationTrait for Relation {
                             }
                         });
                     // println!("create {:?}", data);
-                    admin.create(model, &data).await?;
+                    admin.create(model, &data, Some(txn)).await?;
                 }
                 &"U" => {
                     //println!("update {:?}", data);
-                    admin.update(model, &data).await?;
+                    admin.update(model, &data, Some(txn)).await?;
                 }
                 &"D" => {
                     // println!("delete {:?}", data);
-                    admin.delete(model, &data).await?;
+                    admin.delete(model, &data, Some(txn)).await?;
                 }
                 &"I" => {
                     // skip

@@ -179,7 +179,7 @@ pub async fn create_model<'r>(
 ) -> Result<(Status, content::RawJson<String>), Status> {
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
-    Ok(return_json_object(model, admin.create(model, &data).await))
+    Ok(return_json_object(model, admin.create(model, &data, None).await))
 }
 
 #[get("/<model>/update/<id>")]
@@ -217,7 +217,7 @@ pub async fn update_model(
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let data = json_overwrite_key(&data, &key).map_err(|_x| Status::InternalServerError)?;
-    Ok(return_json_object(model, admin.update(model, &data).await))
+    Ok(return_json_object(model, admin.update(model, &data, None).await))
 }
 
 #[get("/<model>/delete/<id>")]
@@ -256,7 +256,7 @@ pub async fn delete_model(
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let data = json_overwrite_key(&data, &key).map_err(|_x| Status::InternalServerError)?;
 
-    Ok(return_json(admin.delete(model, &data).await))
+    Ok(return_json(admin.delete(model, &data, None).await))
 }
 
 pub fn get_admin_routes() -> Vec<Route> {

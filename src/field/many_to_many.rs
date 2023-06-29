@@ -4,7 +4,7 @@ use crate::templates::AdminFormAutoComplete;
 use crate::{Admin, Json, Result};
 use askama::DynTemplate;
 use async_trait::async_trait;
-use sea_orm::RelationDef;
+use sea_orm::{DatabaseTransaction, RelationDef};
 
 pub struct ManyToMany {
     name: String,
@@ -46,7 +46,13 @@ impl RelationTrait for ManyToMany {
         }))
     }
 
-    async fn commit(&self, _admin: &Admin, _parent_value: &Json) -> Result<Json> {
+    async fn commit(
+        &self,
+        _admin: &Admin,
+        parent_value: &Json,
+        txn: &DatabaseTransaction,
+    ) -> Result<Json> {
+        println!("{:?}", parent_value);
         Err(anyhow::anyhow!("todo"))
     }
 }

@@ -2,7 +2,7 @@ use crate::{create_cond_from_json, json_overwrite_key, list_query_to_list_param}
 
 use super::{templates, AdminField, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
-use sea_orm::{DatabaseConnection, TransactionTrait};
+use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use std::{
     collections::{HashMap, HashSet},
     ops::Deref,
@@ -258,10 +258,11 @@ impl Admin {
         &self,
         model: &Box<dyn ModelAdminTrait + Send + Sync>,
         data: &Json,
+        txn: &DatabaseTransaction,
     ) -> Result<()> {
         for field in model.get_form_fields() {
             match field {
-                AdminField::Relation(rel) => rel.commit(self, data).await?,
+                AdminField::Relation(rel) => rel.commit(self, data, txn).await?,
                 _ => Json::Null,
             };
         }
@@ -272,15 +273,27 @@ impl Admin {
         &self,
         model: &Box<dyn ModelAdminTrait + Send + Sync>,
         data: &Json,
+        txn: Option<&DatabaseTransaction>,
     ) -> Result<Json> {
-        let txn = self.get_connection().begin().await?;
+        let internal_txn = if txn.is_none() {
+            Some(self.conn.get_connection().begin().await?)
+        } else {
+            None
+        };
 
-        let r = model.insert(&self.get_connection(), data).await?;
+        let cur_txn = txn.unwrap_or(internal_txn.as_ref().unwrap());
+
+        // let txn = self.get_connection().begin().await?;
+
+        let r = model.insert(&cur_txn, data).await?;
         let data = json_overwrite_key(data, &r)?;
 
-        self.handle_relation(model, &data).await?;
+        self.handle_relation(model, &data, cur_txn).await?;
 
-        txn.commit().await?;
+        if let Some(txn_data) = internal_txn {
+            txn_data.commit().await?;
+        }
+
         Ok(data)
     }
 
@@ -288,15 +301,25 @@ impl Admin {
         &self,
         model: &Box<dyn ModelAdminTrait + Send + Sync>,
         data: &Json,
+        txn: Option<&DatabaseTransaction>,
     ) -> Result<Json> {
-        let txn = self.get_connection().begin().await?;
+        let internal_txn = if txn.is_none() {
+            Some(self.conn.get_connection().begin().await?)
+        } else {
+            None
+        };
 
-        let r = model.update(&self.get_connection(), data).await?;
+        let cur_txn = txn.unwrap_or(internal_txn.as_ref().unwrap());
+
+        let r = model.update(cur_txn, data).await?;
         let data = json_overwrite_key(data, &r)?;
 
-        self.handle_relation(model, &data).await?;
+        self.handle_relation(model, &data, cur_txn).await?;
 
-        txn.commit().await?;
+        if let Some(txn_data) = internal_txn {
+            txn_data.commit().await?;
+        }
+
         Ok(data)
     }
 
@@ -304,9 +327,20 @@ impl Admin {
         &self,
         model: &Box<dyn ModelAdminTrait + Send + Sync>,
         data: &Json,
+        txn: Option<&DatabaseTransaction>,
     ) -> Result<u64> {
+        let internal_txn = if txn.is_none() {
+            Some(self.conn.get_connection().begin().await?)
+        } else {
+            None
+        };
+        let cur_txn = txn.unwrap_or(internal_txn.as_ref().unwrap());
         let cond = create_cond_from_json(&model.get_primary_keys(), &data, true)?;
-        model.delete(&self.get_connection(), &cond).await
+        let resp = model.delete(cur_txn, &cond).await?;
+        if let Some(txn_data) = internal_txn {
+            txn_data.commit().await?;
+        }
+        Ok(resp)
     }
 
     pub async fn get_delete_template(

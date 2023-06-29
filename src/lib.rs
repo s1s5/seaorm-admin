@@ -3,8 +3,7 @@ use std::collections::HashMap;
 pub use async_trait::async_trait;
 pub use sea_orm;
 pub use sea_orm::Iden;
-use sea_orm::{ColumnDef, Condition, DatabaseConnection}; // なんで必要なのかわからん・・
-
+use sea_orm::{ColumnDef, Condition, DatabaseConnection, DatabaseTransaction};
 mod admin;
 #[cfg(feature = "with-axum")]
 pub mod axum_admin;
@@ -68,7 +67,7 @@ pub trait ModelAdminTrait {
 
     async fn list(&self, conn: &DatabaseConnection, param: &ListParam) -> Result<(u64, Vec<Json>)>;
     async fn get(&self, conn: &DatabaseConnection, cond: &Condition) -> Result<Option<Json>>;
-    async fn insert(&self, conn: &DatabaseConnection, value: &Json) -> Result<Json>;
-    async fn update(&self, conn: &DatabaseConnection, value: &Json) -> Result<Json>;
-    async fn delete(&self, conn: &DatabaseConnection, cond: &Condition) -> Result<u64>;
+    async fn insert(&self, conn: &DatabaseTransaction, value: &Json) -> Result<Json>;
+    async fn update(&self, conn: &DatabaseTransaction, value: &Json) -> Result<Json>;
+    async fn delete(&self, conn: &DatabaseTransaction, cond: &Condition) -> Result<u64>;
 }

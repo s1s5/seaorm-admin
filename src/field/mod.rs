@@ -24,6 +24,7 @@ pub use foreign_key_field::{
 pub use input_field::InputField;
 pub use many_to_many::ManyToMany;
 pub use relation::Relation;
+use sea_orm::DatabaseTransaction;
 pub use textarea_field::TextareaField;
 pub use timestamp_field::TimestampField;
 
@@ -69,5 +70,10 @@ pub trait RelationTrait {
         disabled: bool,
     ) -> Result<Box<dyn DynTemplate + Send>>;
 
-    async fn commit(&self, admin: &Admin, parent_value: &Json) -> Result<Json>;
+    async fn commit(
+        &self,
+        admin: &Admin,
+        parent_value: &Json,
+        txn: &DatabaseTransaction,
+    ) -> Result<Json>;
 }

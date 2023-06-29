@@ -331,15 +331,15 @@ impl ModelAdminExpander {
                     #ident::get_impl(conn, cond).await
                 }
 
-                async fn insert(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: &seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
+                async fn insert(&self, conn: &seaorm_admin::sea_orm::DatabaseTransaction, value: &seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
                     #ident::insert_impl(conn, value).await
                 }
 
-                async fn update(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: &seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
+                async fn update(&self, conn: &seaorm_admin::sea_orm::DatabaseTransaction, value: &seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
                     #ident::update_impl(conn, value).await
                 }
 
-                async fn delete(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: &seaorm_admin::sea_orm::Condition) -> seaorm_admin::Result<u64> {
+                async fn delete(&self, conn: &seaorm_admin::sea_orm::DatabaseTransaction, value: &seaorm_admin::sea_orm::Condition) -> seaorm_admin::Result<u64> {
                     #ident::delete_impl(conn, value).await
                 }
             }
@@ -586,7 +586,7 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
                 async fn insert_impl(
-                    conn: &seaorm_admin::sea_orm::DatabaseConnection,
+                    conn: &seaorm_admin::sea_orm::DatabaseTransaction,
                     value: &seaorm_admin::Json
                 ) -> seaorm_admin::Result<seaorm_admin::Json> {
                     use seaorm_admin::sea_orm::{EntityTrait, ActiveModelTrait, TryIntoModel};
@@ -608,7 +608,7 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
                 async fn update_impl(
-                    conn: &seaorm_admin::sea_orm::DatabaseConnection,
+                    conn: &seaorm_admin::sea_orm::DatabaseTransaction,
                     value: &seaorm_admin::Json
                 ) -> seaorm_admin::Result<seaorm_admin::Json> {
                     use seaorm_admin::sea_orm::{TryIntoModel, ActiveModelTrait, EntityTrait};
@@ -630,7 +630,7 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
             async fn delete_impl(
-                conn: &seaorm_admin::sea_orm::DatabaseConnection,
+                conn: &seaorm_admin::sea_orm::DatabaseTransaction,
                 cond: &seaorm_admin::sea_orm::Condition,
             ) -> seaorm_admin::Result<u64> {
                 use seaorm_admin::sea_orm::{EntityTrait, ModelTrait, QueryFilter};
