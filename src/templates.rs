@@ -88,6 +88,7 @@ pub struct AdminFormAutoCompleteCol {
 #[derive(Template, Clone)]
 #[template(path = "auto-complete.jinja")]
 pub struct AdminFormAutoComplete {
+    pub prefix: String,
     pub name: String,
     pub label: String,
     pub choices: Vec<AdminFormAutoCompleteChoice>,

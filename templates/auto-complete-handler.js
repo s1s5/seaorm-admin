@@ -89,24 +89,16 @@ window.addEventListener("load", (event) => {
     e.addEventListener(
       "addItem",
       function (event) {
-        // console.log("addItem", event);
-        if (event.detail.customProperties == null) {
-          relations.forEach((rel) => {
-            let target_el = document.querySelector(`#${rel[1]}-id`);
-            target_el.value = "";
-          });
-        } else {
-          let data = event.detail.customProperties.data;
-          // memory[event.detail.value] = data;
-          relations.forEach((rel) => {
-            let target_el = document.querySelector(`#${rel[1]}-id`);
-            target_el.value = target_el.value
-              .split(",")
-              .filter((i) => !!i)
-              .concat([data[rel[0]]])
-              .join(",");
-          });
-        }
+        let data = event.detail.customProperties.data;
+
+        relations.forEach((rel) => {
+          let target_el = document.querySelector(`#${rel[1]}-id`);
+          target_el.value = target_el.value
+            .split(",")
+            .filter((i) => !!i)
+            .concat([data[rel[0]]])
+            .join(",");
+        });
       },
       false
     );

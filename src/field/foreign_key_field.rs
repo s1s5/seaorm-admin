@@ -89,6 +89,7 @@ where
 impl ForeignKeyField {
     pub fn new(rel_def: &RelationDef, nullable: bool) -> Result<Self> {
         Ok(ForeignKeyField(AdminFormAutoComplete {
+            prefix: "".to_string(),
             name: relation_def_to_form_name(rel_def)?,
             label: relation_def_to_form_label(rel_def)?,
             choices: vec![],
@@ -154,6 +155,7 @@ impl FieldTrait for ForeignKeyField {
                 }];
             }
         };
+        template.prefix = prefix.into();
         template.name = format!("{}{}", prefix, template.name);
         template.disabled = disabled;
         Ok(Box::new(template))

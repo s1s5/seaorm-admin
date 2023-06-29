@@ -134,6 +134,61 @@ pub fn create_cond_from_json(
     Ok(cond)
 }
 
+fn json_force_i64(value: &Json) -> Result<i64> {
+    match value {
+        Json::String(s) => Ok(s.parse::<i64>()?),
+        Json::Number(i) => {
+            if i.is_f64() {
+                Err(anyhow::anyhow!("float found"))
+            } else {
+                Ok(i.as_i64().unwrap())
+            }
+        }
+        _ => Err(anyhow::anyhow!("value must be number or string")),
+    }
+}
+
+pub fn create_cond_from_input_json(
+    columns: &Vec<(String, ColumnDef)>,
+    filter: &Json,
+    check_exists: bool,
+) -> Result<Condition> {
+    let filter = filter
+        .as_object()
+        .ok_or(anyhow::anyhow!("filter must be object"))?;
+    let mut cond = Condition::all();
+    for (col_name, col_def) in columns.iter() {
+        if let Some(value) = filter.get(col_name) {
+            let col: DynIden = SeaRc::new(Alias::new(col_name));
+            match col_def.get_column_type() {
+                sea_orm::ColumnType::Char(_)
+                | sea_orm::ColumnType::String(_)
+                | sea_orm::ColumnType::Text
+                | sea_orm::ColumnType::Uuid => {
+                    cond = cond.add(Expr::col(col).eq(value.as_str()));
+                }
+                sea_orm::ColumnType::TinyInteger
+                | sea_orm::ColumnType::SmallInteger
+                | sea_orm::ColumnType::Integer
+                | sea_orm::ColumnType::BigInteger
+                | sea_orm::ColumnType::TinyUnsigned
+                | sea_orm::ColumnType::SmallUnsigned
+                | sea_orm::ColumnType::Unsigned
+                | sea_orm::ColumnType::BigUnsigned => {
+                    cond = cond.add(Expr::col(col).eq(json_force_i64(value)?));
+                }
+                sea_orm::ColumnType::Float | sea_orm::ColumnType::Double => {}
+
+                _ => Err(anyhow::anyhow!("Unsupport column type"))?,
+            }
+        } else if check_exists {
+            return Err(anyhow::anyhow!("key not found"));
+        }
+    }
+
+    Ok(cond)
+}
+
 pub fn create_cond_from_search_queries(
     columns: &Vec<(String, ColumnDef)>,
     queries: &Vec<String>,
