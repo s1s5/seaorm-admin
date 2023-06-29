@@ -110,5 +110,16 @@ window.addEventListener("load", (event) => {
       },
       false
     );
+    e.addEventListener("hideDropdown", function (event) {
+      // console.log("hideDropdown", event);
+      (async () => {
+        choices.setChoices(
+          await get_choices(to_table, null, nullable),
+          "value",
+          "label",
+          true
+        );
+      })();
+    });
   });
 });
