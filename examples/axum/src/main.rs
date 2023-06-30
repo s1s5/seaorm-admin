@@ -1,7 +1,7 @@
 use axum::{extract::Extension, Router};
 use entity::{author, post, tag, tag_relation, test_model};
 use sea_orm::Set;
-use seaorm_admin::{enum_field, Admin, ModelAdmin};
+use seaorm_admin::{enum_field, inline_field, m2m_field, Admin, ModelAdmin};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -27,8 +27,12 @@ fn get_initial_author() -> author::ActiveModel {
     format = format_author,
     initial_value = get_initial_author,
     form_fields = [
-        seaorm_admin::AdminField::Relation(Box::new(seaorm_admin::Relation::new("posts", post::Relation::Author.def(), true))),
-        seaorm_admin::AdminField::Relation(Box::new(seaorm_admin::ManyToMany::new("tags", tag_relation::Relation::Author.def(), tag_relation::Relation::Tag.def())))
+        inline_field("posts", post::Relation::Author.def(), true),
+        m2m_field(
+            "tags",
+            tag_relation::Relation::Author.def(),
+            tag_relation::Relation::Tag.def()
+        ),
     ]
 )]
 struct AuthorAdmin;
@@ -40,14 +44,18 @@ struct PostAdmin;
 #[derive(ModelAdmin, Default)]
 #[model_admin(module = test_model,
     form_fields = [
-        enum_field!(test_model::Column::EnumString, test_model::Category::iter()),
-        enum_field!(test_model::Column::EnumI32, test_model::Color::iter()),
+        enum_field(test_model::Column::EnumString, test_model::Category::iter()),
+        enum_field(test_model::Column::EnumI32, test_model::Color::iter()),
     ],
 )]
 struct TestAdmin;
 
+fn tag_display(model: &tag::Model) -> String {
+    format!("Tag[{}] {}", model.id, model.name)
+}
+
 #[derive(ModelAdmin, Default)]
-#[model_admin(module = tag)]
+#[model_admin(module = tag, format=tag_display)]
 struct TagAdmin;
 
 #[derive(ModelAdmin, Default)]

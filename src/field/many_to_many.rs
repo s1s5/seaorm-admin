@@ -1,4 +1,4 @@
-use super::{foreign_key_field::extract_table_name, RelationTrait};
+use super::{foreign_key_field::extract_table_name, AdminField, RelationTrait};
 use crate::field::foreign_key_field::identity_to_vec_string;
 use crate::templates::{
     AdminFormAutoComplete, AdminFormAutoCompleteChoice, AdminFormAutoCompleteCol,
@@ -10,8 +10,11 @@ use crate::{
 use crate::{Admin, Json, Result};
 use askama::DynTemplate;
 use async_trait::async_trait;
-use sea_orm::sea_query::{Alias, Expr, SeaRc};
-use sea_orm::{Condition, DatabaseConnection, DatabaseTransaction, DynIden, RelationDef};
+use sea_orm::{Condition, DatabaseConnection, DatabaseTransaction,  RelationDef};
+
+pub fn m2m_field(name: &str, from_def: RelationDef, to_def: RelationDef) -> AdminField {
+    AdminField::Relation(Box::new(ManyToMany::new(name, from_def, to_def)))
+}
 
 pub struct ManyToMany {
     name: String,
@@ -273,7 +276,7 @@ impl RelationTrait for ManyToMany {
                     value.insert(k, Json::String(v.clone()));
                 });
             let value = Json::Object(value);
-            println!("inserting {:?}", value);
+            // println!("inserting {:?}", value);
             model.insert(txn, &value).await?;
         }
 
@@ -287,7 +290,7 @@ impl RelationTrait for ManyToMany {
                 });
             let value = Json::Object(value);
             let cond = create_cond_from_input_json(&through_columns, &value, false)?;
-            println!("deleting {:?}", value);
+            // println!("deleting {:?}", value);
             model.delete(txn, &cond).await?;
         }
         Ok(Json::Null)

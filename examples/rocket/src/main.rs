@@ -35,8 +35,8 @@ struct PostAdmin;
 #[derive(ModelAdmin, Default)]
 #[model_admin(module = test_model,
     form_fields = [
-        enum_field!(test_model::Column::EnumString, test_model::Category::iter()),
-        enum_field!(test_model::Column::EnumI32, test_model::Color::iter()),
+        enum_field(test_model::Column::EnumString, test_model::Category::iter()),
+        enum_field(test_model::Column::EnumI32, test_model::Color::iter()),
     ],
 )]
 struct TestAdmin;

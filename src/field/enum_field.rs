@@ -1,4 +1,4 @@
-use super::FieldTrait;
+use super::{AdminField, FieldTrait};
 use crate::{json_force_str, templates::AdminFormSelect, Admin, Json, Result};
 use askama::DynTemplate;
 use async_trait::async_trait;
@@ -7,14 +7,14 @@ use std::collections::HashMap;
 
 pub struct EnumField(AdminFormSelect);
 
-#[macro_export]
-macro_rules! enum_field {
-    ($col:path, $e:expr) => {
-        seaorm_admin::AdminField::Field(Box::new(seaorm_admin::EnumField::from_enum($col, $e)))
-    };
+pub fn enum_field<C, T>(col: C, it: T) -> AdminField
+where
+    C: ColumnTrait,
+    T: Iterator,
+    <T as Iterator>::Item: std::fmt::Debug + std::fmt::Display,
+{
+    AdminField::Field(Box::new(EnumField::from_enum(col, it)))
 }
-
-pub use enum_field;
 
 impl EnumField {
     pub fn new(name: &str, choices: Vec<(String, String)>) -> Self {

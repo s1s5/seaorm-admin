@@ -13,6 +13,15 @@ use async_trait::async_trait;
 use sea_orm::{DatabaseTransaction, RelationDef};
 use std::collections::HashSet;
 
+pub fn inline_field(name: &str, rdef: RelationDef, multiple: bool) -> AdminField
+{
+    AdminField::Relation(Box::new(Relation::new(
+        name,
+        rdef,
+        multiple,
+    )))
+}
+
 pub struct Relation {
     name: String,
     def: RelationDef,
