@@ -1,35 +1,35 @@
-function debounce(func, timeout) {
-  let timer;
-  return function (...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      func.apply(this, args);
-    }, timeout);
-  };
-}
-
-async function get_choices(to_table, query, nullable) {
-  let res = await fetch(
-    query == null
-      ? `{{ site.sub_path }}/${to_table}/`
-      : `{{ site.sub_path }}/${to_table}/?_q=${query}`,
-    {
-      headers: {
-        accept: "application/json",
-      },
-    }
-  );
-  let object_list = await res.json();
-  return object_list.data.map((e) => ({
-    label: e.label,
-    value: e.key,
-    customProperties: {
-      data: e.data,
-    },
-  }));
-}
-
 window.addEventListener("load", (event) => {
+  function debounce(func, timeout) {
+    let timer;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        func.apply(this, args);
+      }, timeout);
+    };
+  }
+
+  async function get_choices(to_table, query, nullable) {
+    let res = await fetch(
+      query == null
+        ? `{{ site.sub_path }}/${to_table}/`
+        : `{{ site.sub_path }}/${to_table}/?_q=${query}`,
+      {
+        headers: {
+          accept: "application/json",
+        },
+      }
+    );
+    let object_list = await res.json();
+    return object_list.data.map((e) => ({
+      label: e.label,
+      value: e.key,
+      customProperties: {
+        data: e.data,
+      },
+    }));
+  }
+
   document.querySelectorAll(".auto-complete").forEach(function (e) {
     // let memory = {};
     console.log(e.attributes["multiple"]);
