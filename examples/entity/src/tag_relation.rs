@@ -3,12 +3,11 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "post")]
+#[sea_orm(table_name = "tag_relation")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub title: String,
-    pub text: String,
+    pub tag_id: i32,
     pub author_id: i32,
 }
 
@@ -22,11 +21,25 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Author,
+    #[sea_orm(
+        belongs_to = "super::tag::Entity",
+        from = "Column::TagId",
+        to = "super::tag::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
+    Tag,
 }
 
 impl Related<super::author::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Author.def()
+    }
+}
+
+impl Related<super::tag::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Tag.def()
     }
 }
 

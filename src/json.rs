@@ -1,4 +1,4 @@
-use crate::{CustomError, Error, Json, Result};
+use crate::{CustomError, Json, Result};
 use base64::Engine;
 use log::warn;
 #[cfg(feature = "with-rust_decimal")]
@@ -18,7 +18,6 @@ where
         .iter()
         .map(|col| {
             if let Some(v) = src.get(col.to_string()) {
-                println!("col:{:?}, value:{:?}", col, sanitize_value(col, v));
                 target.set(*col, sanitize_value(col, v)?);
             }
             Ok(())
@@ -113,6 +112,20 @@ pub fn json_convert_vec_to_json(
     }))
 }
 
+// ----------------------------------------------------------------------------
+pub fn json_extract_prefixed(value: &Json, prefix: &str) -> Result<Json> {
+    let o = value
+        .as_object()
+        .ok_or(anyhow::anyhow!("value must be Object"))?;
+
+    Ok(Json::Object(
+        o.iter()
+            .filter(|(k, _v)| k.starts_with(prefix))
+            .map(|(k, v)| (k[prefix.len()..].to_string(), v.clone()))
+            .collect(),
+    ))
+}
+
 // ============================================================================
 macro_rules! sanitize_value_check_empty {
     ($ident: ident, $col: expr, $v: expr) => {
@@ -120,10 +133,10 @@ macro_rules! sanitize_value_check_empty {
             if $col.def().is_null() {
                 return Ok(sea_orm::Value::$ident(None));
             } else {
-                return Err(Box::new(sea_orm::DbErr::Custom(format!(
+                return Err(anyhow::anyhow!(format!(
                     "{:?} cannot be null",
                     $col.to_string()
-                ))));
+                )));
             }
         }
     };
@@ -262,7 +275,7 @@ where
                 col.def(),
                 v
             );
-            return Err(Box::new(sea_orm::DbErr::Custom("not implemented".into())));
+            return Err(anyhow::anyhow!("not implemented"));
         }
     })
 }
@@ -277,9 +290,9 @@ where
             .as_str()
             .unwrap()
             .parse::<T>()
-            .map_err(|x| Box::new(x) as Error)
+            .map_err(|x| anyhow::anyhow!(x.to_string()))
     } else {
-        serde_json::from_value::<T>(value.clone()).map_err(|x| Box::new(x) as Error)
+        Ok(serde_json::from_value::<T>(value.clone())?)
     }
 }
 
@@ -288,86 +301,69 @@ fn json_value_is_empty(value: &serde_json::Value) -> bool {
 }
 
 fn to_json_value(value: sea_orm::Value) -> Result<Json> {
-    match value {
-        sea_orm::Value::Bool(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::TinyInt(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::SmallInt(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::Int(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::BigInt(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::TinyUnsigned(v) => {
-            serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
-        }
-        sea_orm::Value::SmallUnsigned(v) => {
-            serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
-        }
-        sea_orm::Value::Unsigned(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::BigUnsigned(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::Float(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::Double(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::String(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        sea_orm::Value::Char(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+    Ok(match value {
+        sea_orm::Value::Bool(v) => serde_json::to_value(v)?,
+        sea_orm::Value::TinyInt(v) => serde_json::to_value(v)?,
+        sea_orm::Value::SmallInt(v) => serde_json::to_value(v)?,
+        sea_orm::Value::Int(v) => serde_json::to_value(v)?,
+        sea_orm::Value::BigInt(v) => serde_json::to_value(v)?,
+        sea_orm::Value::TinyUnsigned(v) => serde_json::to_value(v)?,
+        sea_orm::Value::SmallUnsigned(v) => serde_json::to_value(v)?,
+        sea_orm::Value::Unsigned(v) => serde_json::to_value(v)?,
+        sea_orm::Value::BigUnsigned(v) => serde_json::to_value(v)?,
+        sea_orm::Value::Float(v) => serde_json::to_value(v)?,
+        sea_orm::Value::Double(v) => serde_json::to_value(v)?,
+        sea_orm::Value::String(v) => serde_json::to_value(v)?,
+        sea_orm::Value::Char(v) => serde_json::to_value(v)?,
         sea_orm::Value::Bytes(v) => {
             if let Some(v) = v {
                 let encoded = base64::engine::general_purpose::STANDARD.encode(&v[..]);
-                serde_json::to_value(encoded).map_err(|e| Box::new(e) as Error)
+                serde_json::to_value(encoded)?
             } else {
-                serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
+                serde_json::to_value(v)?
             }
         }
         sea_orm::Value::Json(v) => {
             if let Some(v) = v {
-                let json_str =
-                    serde_json::to_string_pretty(&v).map_err(|e| Box::new(e) as Error)?;
-                serde_json::to_value(json_str).map_err(|e| Box::new(e) as Error)
+                let json_str = serde_json::to_string_pretty(&v)?;
+                serde_json::to_value(json_str)?
             } else {
-                serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
+                serde_json::to_value(v)?
             }
         }
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::ChronoDate(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        sea_orm::Value::ChronoDate(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::ChronoTime(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        sea_orm::Value::ChronoTime(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::ChronoDateTime(v) => {
-            serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
-        }
+        sea_orm::Value::ChronoDateTime(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::ChronoDateTimeUtc(v) => {
-            serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
-        }
+        sea_orm::Value::ChronoDateTimeUtc(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::ChronoDateTimeLocal(v) => {
-            serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
-        }
+        sea_orm::Value::ChronoDateTimeLocal(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::ChronoDateTimeWithTimeZone(v) => {
-            serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
-        }
+        sea_orm::Value::ChronoDateTimeWithTimeZone(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::TimeDate(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        sea_orm::Value::TimeDate(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::TimeTime(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        sea_orm::Value::TimeTime(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::TimeDateTime(v) => {
-            serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
-        }
+        sea_orm::Value::TimeDateTime(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-chrono")]
-        sea_orm::Value::TimeDateTimeWithTimeZone(v) => {
-            serde_json::to_value(v).map_err(|e| Box::new(e) as Error)
-        }
+        sea_orm::Value::TimeDateTimeWithTimeZone(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-uuid")]
-        sea_orm::Value::Uuid(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        sea_orm::Value::Uuid(v) => serde_json::to_value(v)?,
         #[cfg(feature = "with-rust_decimal")]
-        sea_orm::Value::Decimal(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
-        // sea_orm::Value::BigDecimal(v) => serde_json::to_value(v).map_err(|e| Box::new(e) as Error),
+        sea_orm::Value::Decimal(v) => serde_json::to_value(v)?,
+        // sea_orm::Value::BigDecimal(v) => serde_json::to_value(v),
         // sea_orm::Value::Array(ty, v) => {}
         // sea_orm::Value::IpNetwork(v) => {}
         // sea_orm::Value::MacAddress(v) => {}
         _ => {
             warn!("Unsupported column type found. {:?}", value);
-            Err(Box::new(sea_orm::DbErr::Custom("Unsupported".into())))
+            return Err(anyhow::anyhow!("Unsupported"));
         }
-    }
+    })
 }
 
 #[cfg(test)]

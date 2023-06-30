@@ -1,0 +1,34 @@
+<div class="border-top mt-2 p-1">
+    <h4 class="d-flex justify-content-between">{{ name }}{% if multiple %}<button type="button"
+            class="btn btn-primary sub-form-add-button" data-target="{{ name }}">add</button>{% endif %}</h4>
+</div>
+<div id="{{ name }}-container" class="ms-4 m-2 sub-form-container">
+    <input type="hidden" id="{{ name }}.state-id" name="{{ name }}.state"
+        value="{% for row in rows %}{% if loop.index0 != 0 %},{% endif %}{% if row.is_update %}U{% else %}C{% endif %}{% endfor %}" />
+    {% for row in rows %}
+    <div id="{{ name }}.{{ loop.index0 }}" class="row border-bottom p-2">
+        {% for field in row.fields %}
+        <div class="col {% if field.is_pkey %}d-none{% endif %}">
+            {{ field.field.dyn_render().unwrap()|safe }}
+        </div>
+        {% endfor %}
+        {% if multiple %}
+        <div class="d-flex col align-items-center flex-grow-0">
+            <button type="button" class="btn btn-danger sub-form-delete-button" data-target="{{ name }}"
+                data-index="{{ loop.index0 }}">del</button>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <div id="{{ name }}-template" class="d-none row border-bottom p-2">
+        {% for field in template_fields %}
+        <div class="col">
+            {{ field.dyn_render().unwrap()|safe }}
+        </div>
+        {% endfor %}
+        <div class="d-flex col align-items-center flex-grow-0">
+            <button type="button" class="btn btn-danger sub-form-delete-button"
+                data-target="{{ name }}">del</button>
+        </div>
+    </div>
+</div>

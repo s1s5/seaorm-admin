@@ -2,6 +2,8 @@ pub use sea_orm_migration::prelude::*;
 
 mod m20220101_000001_create_table;
 mod m20230421_000833_add_test;
+mod m20230628_051557_add_tag;
+mod m20230629_020856_add_unique;
 
 pub struct Migrator;
 
@@ -11,6 +13,8 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20220101_000001_create_table::Migration),
             Box::new(m20230421_000833_add_test::Migration),
+            Box::new(m20230628_051557_add_tag::Migration),
+            Box::new(m20230629_020856_add_unique::Migration),
         ]
     }
 }

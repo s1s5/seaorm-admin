@@ -27,7 +27,7 @@ $ docker run --rm --tmpfs=/pgtmpfs \
 $ export DATABASE_URL=postgres://postgres:postgres@localhost:15432/postgres
 $ cd examples/migrations
 $ cargo run
-$ cd ../rocket
+$ cd ../axum
 $ cargo run
 # access http://localhost:8000/admin/
 ```
@@ -99,7 +99,16 @@ fn get_initial_author() -> author::ActiveModel {
     search_fields = [Id, Name],
     ordering = [(Id, Desc)],
     format = format_author,
-    initial_value = get_initial_author
+    initial_value = get_initial_author,
+    form_fields = [
+        enum_field(author::Column::Category, author::Category::iter()),
+        inline_field("posts", post::Relation::Author.def(), true),
+        m2m_field(
+            "tags",
+            tag_relation::Relation::Author.def(),
+            tag_relation::Relation::Tag.def()
+        ),
+    ]
 )]
 struct AuthorAdmin;
 ```
@@ -152,6 +161,15 @@ list of (Column, Asc | Desc). used in list view.
 identity for Model -> String function. used in auto_complete
 - `initial_value`
 identity for the function returns AtctiveModel. used when creating, and some times called for create form.
+- `form_fields`
+list of seaorm_admin::AdminField. You can add additional editable fields or override field widgets.
+
+| field | description |
+| -------- | ----- |
+| enum_field | enum field. You can select with select box in admin ui. |
+| inline_field | You can edit a row in another table that has a foreign key referencing the current table. |
+| m2m_field | You can edit like Django's ManyToManyField |
+
 
 ## null handling when set empty string in the form
 | nullable | field | db-value |

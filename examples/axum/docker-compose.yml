@@ -22,6 +22,7 @@ services:
 
   migration:
     image: s1s5/rust-dev
+    command: ["/bin/bash", "-c", "while true; do sleep 1; done"]
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/axum
     volumes:

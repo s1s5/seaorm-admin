@@ -1,4 +1,8 @@
 <label for="{{ name }}-id" class="form-label">{{ label }}</label>
+{% for col in cols %}
+<input type="hidden" id="{{ prefix }}{{ col.from_col }}-id" name="{{ prefix }}{{ col.from_col }}"
+       value="{% for v in col.value %}{% if loop.index0 != 0 %},{% endif %}{{ v }}{% endfor %}"/>
+{% endfor %}
 {% if true ~%}
 <select
   class="auto-complete form-control"
@@ -8,12 +12,12 @@
   {% if disabled%}disabled{%endif%}
   data-to_table="{{ to_table }}"
   {% for col in cols %}
-    data-{{ loop.index0 }}-to="{{ col.to_col}}" data-{{ loop.index0 }}-from="{{ col.from_col}}"
+    data-{{ loop.index0 }}-to="{{ col.to_col }}" data-{{ loop.index0 }}-from="{{ prefix }}{{ col.from_col }}"
   {% endfor %}
   {% if nullable %}data-nullable="true"{% endif %}
   {% if multiple %}multiple{% endif %}
   >
-  {% if let Some(choice) = choice %}<option value="{{ choice.value }}" selected>{{ choice.label }}</option>{% endif %}
+  {% for choice in choices %}<option value="{{ choice.value }}" data-custom-properties='{"data": {{ choice.json_str|safe }}}' selected>{{ choice.label }}</option>{% endfor %}
 </select>
 
 {% if let Some(help_text) = help_text %}

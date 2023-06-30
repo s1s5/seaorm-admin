@@ -1,3 +1,5 @@
+use crate::create_cond_from_json;
+
 use super::{json_overwrite_key, templates, Admin, Json, ModelAdminTrait};
 use askama::Template;
 use rocket::request::Request;
@@ -140,7 +142,7 @@ pub async fn list(
         let object_list = admin
             .get_list_as_json(model, &request_info.query)
             .await
-            .map_err(|_x: super::Error| Status::InternalServerError)?;
+            .map_err(|_x| Status::InternalServerError)?;
         Ok(HtmlOrJson::Json(content::RawJson(
             serde_json::to_string(&object_list).map_err(|_x| Status::InternalServerError)?,
         )))
@@ -164,6 +166,7 @@ pub async fn get_create_template(
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
     let template = admin
         .get_create_template(model)
+        .await
         .map_err(|_x| Status::InternalServerError)?;
     Ok(content::RawHtml(template.render().unwrap()))
 }
@@ -176,10 +179,7 @@ pub async fn create_model<'r>(
 ) -> Result<(Status, content::RawJson<String>), Status> {
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
-    Ok(return_json_object(
-        model,
-        model.insert(&admin.get_connection(), data).await,
-    ))
+    Ok(return_json_object(model, admin.create(model, &data, None).await))
 }
 
 #[get("/<model>/update/<id>")]
@@ -190,8 +190,10 @@ pub async fn get_update_template(
 ) -> Result<content::RawHtml<String>, Status> {
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
+        .map_err(|_x| Status::BadRequest)?;
     let row = model
-        .get(&admin.get_connection(), key)
+        .get(&admin.get_connection(), &cond)
         .await
         .map_err(|_x| Status::InternalServerError)?
         .ok_or(Status::NotFound)?;
@@ -215,10 +217,7 @@ pub async fn update_model(
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let data = json_overwrite_key(&data, &key).map_err(|_x| Status::InternalServerError)?;
-    Ok(return_json_object(
-        model,
-        model.update(&admin.get_connection(), data).await,
-    ))
+    Ok(return_json_object(model, admin.update(model, &data, None).await))
 }
 
 #[get("/<model>/delete/<id>")]
@@ -229,14 +228,17 @@ pub async fn get_delete_template(
 ) -> Result<content::RawHtml<String>, Status> {
     let model = admin.models.get(model).ok_or(Status::NotFound)?;
     let key = model.key_to_json(id).map_err(|_x| Status::BadRequest)?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
+        .map_err(|_x| Status::BadRequest)?;
     let row = model
-        .get(&admin.get_connection(), key)
+        .get(&admin.get_connection(), &cond)
         .await
         .map_err(|_x| Status::InternalServerError)?
         .ok_or(Status::NotFound)?;
 
     let template = admin
         .get_delete_template(model, &row)
+        .await
         .map_err(|_x| Status::InternalServerError)?;
 
     Ok(content::RawHtml(template.render().unwrap()))
@@ -254,9 +256,7 @@ pub async fn delete_model(
     let data: serde_json::Value = serde_json::from_slice(data).unwrap();
     let data = json_overwrite_key(&data, &key).map_err(|_x| Status::InternalServerError)?;
 
-    Ok(return_json(
-        model.delete(&admin.get_connection(), data).await,
-    ))
+    Ok(return_json(admin.delete(model, &data, None).await))
 }
 
 pub fn get_admin_routes() -> Vec<Route> {

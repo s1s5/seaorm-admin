@@ -12,26 +12,26 @@ pub struct ModelAdminExpander {
     module: ExprPath,
     ident: Ident,
     list_display: Option<Vec<IdentOrLiteral>>,
-    form_fields: Option<Vec<syn::Expr>>,
-    auto_complete: Option<Vec<syn::Expr>>,
+    editable_fields: Option<Vec<syn::Expr>>,
+    auto_complete: Option<Vec<syn::Ident>>,
     ordering: Option<Vec<(syn::Expr, syn::Expr)>>,
     search_fields: Option<Vec<syn::Expr>>,
     format: Option<Ident>,
     initial_value: Option<Ident>,
-    widgets: Option<Vec<(syn::Expr, syn::Expr)>>,
+    form_fields: Option<Vec<syn::Expr>>,
 }
 
 impl ModelAdminExpander {
     pub fn new(ident: Ident, attrs: Vec<Attribute>) -> std::result::Result<Self, syn::Error> {
         let mut module = None;
         let mut list_display = None;
-        let mut form_fields = None;
+        let mut editable_fields = None;
         let mut auto_complete = None;
         let mut ordering = None;
         let mut search_fields = None;
         let mut format = None;
         let mut initial_value = None;
-        let mut widgets = None;
+        let mut form_fields = None;
 
         attrs.iter().try_for_each(|attr| {
             if let Ok(list) = attr.parse_args_with(Punctuated::<Meta, Comma>::parse_terminated) {
@@ -43,7 +43,8 @@ impl ModelAdminExpander {
                             } else if ident == "list_display" {
                                 list_display = Some(super::parse::parse_list_display(ident, &nv)?);
                             } else if ident == "fields" {
-                                form_fields = Some(super::parse::parse_form_fields(ident, &nv)?);
+                                editable_fields =
+                                    Some(super::parse::parse_editable_fields(ident, &nv)?);
                             } else if ident == "auto_complete" {
                                 auto_complete =
                                     Some(super::parse::parse_auto_complete(ident, &nv)?);
@@ -57,8 +58,9 @@ impl ModelAdminExpander {
                             } else if ident == "initial_value" {
                                 initial_value =
                                     Some(super::parse::parse_initial_value(ident, nv)?.clone());
-                            } else if ident == "widgets" {
-                                widgets = Some(super::parse::parse_widgets(ident, nv)?.clone());
+                            } else if ident == "form_fields" {
+                                form_fields =
+                                    Some(super::parse::parse_form_fields(ident, nv)?.clone());
                             }
                         }
                     }
@@ -72,13 +74,13 @@ impl ModelAdminExpander {
             module,
             ident,
             list_display,
-            form_fields,
+            editable_fields,
             auto_complete,
             ordering,
             search_fields,
             format,
             initial_value,
-            widgets,
+            form_fields,
         })
     }
 
@@ -179,13 +181,13 @@ impl ModelAdminExpander {
         ))
     }
 
-    fn expand_get_form_fields(&self) -> Result {
+    fn expand_get_editable_fields(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
-        if let Some(form_fields) = &self.form_fields {
+        if let Some(form_fields) = &self.editable_fields {
             Ok(quote! {
                 impl #ident {
-                    fn get_form_fields() -> Vec<#module::Column> {
+                    fn get_editable_fields() -> Vec<#module::Column> {
                         vec![#(#module :: Column:: #form_fields),*]
                     }
                 }
@@ -193,7 +195,7 @@ impl ModelAdminExpander {
         } else {
             Ok(quote!(
                 impl #ident {
-                    fn get_form_fields() -> Vec<#module :: Column> {
+                    fn get_editable_fields() -> Vec<#module :: Column> {
                         use seaorm_admin::sea_orm::Iterable;
                         #module :: Column::iter().collect()
                     }
@@ -287,6 +289,16 @@ impl ModelAdminExpander {
                     #ident::get_list_per_page()
                 }
 
+                fn get_columns(&self) -> Vec<(String, seaorm_admin::sea_orm::ColumnDef)> {
+                    use seaorm_admin::sea_orm::{Iden, Iterable, ColumnTrait};
+                    #module::Column::iter().map(|x| (x.to_string(), x.def())).collect()
+                }
+
+                fn get_primary_keys(&self) -> Vec<String> {
+                    use seaorm_admin::sea_orm::Iden;
+                    #ident::get_keys().into_iter().map(|x| x.to_string()).collect()
+                }
+
                 fn to_str(&self, value: &seaorm_admin::Json) -> seaorm_admin::Result<String> {
                     #ident::to_str_impl(value)
                 }
@@ -299,44 +311,35 @@ impl ModelAdminExpander {
                     seaorm_admin::from_key_string(&#ident::get_keys(), key)
                 }
 
-                fn get_create_form_fields(&self) -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
-                    #ident::get_create_form_fields_impl()
-                }
-
-                fn get_update_form_fields(&self) -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
-                    #ident::get_update_form_fields_impl()
-                }
-
                 fn list_display(&self) -> Vec<String> {
                     #ident::get_list_display()
                 }
 
-                fn get_auto_complete(&self) -> Vec<seaorm_admin::sea_orm::RelationDef> {
-                    use seaorm_admin::sea_orm::RelationTrait;
-                    #ident::get_auto_complete().iter().map(|x| x.def()).collect()
+                fn get_form_fields(&self) -> Vec<seaorm_admin::AdminField> {
+                    #ident::get_form_fields_impl()
                 }
 
                 async fn list(
                     &self,
                     conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                    query: &seaorm_admin::ListQuery,
+                    param: &seaorm_admin::ListParam,
                 ) -> seaorm_admin::Result<(u64, Vec<seaorm_admin::Json>)> {
-                    #ident::list_impl(conn, query).await
+                    #ident::list_impl(conn, param).await
                 }
 
-                async fn get(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, key: seaorm_admin::Json) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
-                    #ident::get_impl(conn, key).await
+                async fn get(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, cond: &seaorm_admin::sea_orm::Condition) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
+                    #ident::get_impl(conn, cond).await
                 }
 
-                async fn insert(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
+                async fn insert(&self, conn: &seaorm_admin::sea_orm::DatabaseTransaction, value: &seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
                     #ident::insert_impl(conn, value).await
                 }
 
-                async fn update(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
+                async fn update(&self, conn: &seaorm_admin::sea_orm::DatabaseTransaction, value: &seaorm_admin::Json) -> seaorm_admin::Result<seaorm_admin::Json> {
                     #ident::update_impl(conn, value).await
                 }
 
-                async fn delete(&self, conn: &seaorm_admin::sea_orm::DatabaseConnection, value: seaorm_admin::Json) -> seaorm_admin::Result<u64> {
+                async fn delete(&self, conn: &seaorm_admin::sea_orm::DatabaseTransaction, value: &seaorm_admin::sea_orm::Condition) -> seaorm_admin::Result<u64> {
                     #ident::delete_impl(conn, value).await
                 }
             }
@@ -423,61 +426,58 @@ impl ModelAdminExpander {
         }
     }
 
-    fn expand_create_form_fields_impl(&self) -> Result {
+    fn expand_get_form_fields_impl(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
-        let widgets = self.widgets.clone().unwrap_or(vec![]);
-        let (columns, widgets): (Vec<syn::Expr>, Vec<syn::Expr>) = widgets.into_iter().unzip();
+        let auto_complete = self.auto_complete.clone().unwrap_or(vec![]);
+        let form_fields = self.form_fields.clone().unwrap_or(vec![]);
 
         Ok(quote!(
         impl #ident {
-            fn get_create_form_fields_impl() -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
-                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait};
-
-                // primary keyは隠す
-                let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
-                let model = #ident::get_initial_value();
-                let mut widgets: std::collections::HashMap<String, Box<dyn seaorm_admin::Widget>> = vec![#((#module :: Column:: #columns.to_string(), Box::new(#widgets) as Box<dyn seaorm_admin::Widget>)),*].into_iter().collect();
-
-                #ident::get_form_fields().into_iter().filter(
-                    |x| !keys.contains(&x.to_string())).filter(
-                        |x| !model.get(*x).is_set()
-                    ).map(|x| {
-                        let a = seaorm_admin::AdminField::create_from(&x, true);
-                        if let Some(w) = widgets.remove(&x.to_string()) {
-                            (a, w)
-                        } else {
-                            (a, Box::new(seaorm_admin::DefaultWidget{}) as Box<dyn seaorm_admin::Widget>)
-                        }
-                    }).collect()
-            }
-        }))
-    }
-
-    fn expand_update_form_fields_impl(&self) -> Result {
-        let ident = &self.ident;
-        let module = &self.module;
-        let widgets = self.widgets.clone().unwrap_or(vec![]);
-        let (columns, widgets): (Vec<syn::Expr>, Vec<syn::Expr>) = widgets.into_iter().unzip();
-
-        Ok(quote!(
-        impl #ident {
-            fn get_update_form_fields_impl() -> Vec<(seaorm_admin::AdminField, Box<dyn seaorm_admin::Widget>)> {
-                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn};
-
-                let keys: std::collections::HashSet<_> = #module :: PrimaryKey::iter().map(|x| x.into_column().to_string()).collect();
-                let mut widgets: std::collections::HashMap<String, Box<dyn seaorm_admin::Widget>> = vec![#((#module :: Column:: #columns.to_string(), Box::new(#widgets) as Box<dyn seaorm_admin::Widget>)),*].into_iter().collect();
-
-                #ident::get_form_fields()
+            fn get_form_fields_impl() -> Vec<seaorm_admin::AdminField> {
+                use std::collections::{HashSet, HashMap};
+                use seaorm_admin::sea_orm::{Iden, Iterable, PrimaryKeyToColumn, ActiveModelTrait, ColumnTrait, RelationTrait};
+                let auto_complete: Vec<sea_orm::RelationDef> = vec![#((#module::Relation::#auto_complete.def())),*];
+                let mut ac_col_set:HashSet<String> = auto_complete
+                    .iter()
+                    .map(|x| seaorm_admin::extract_cols_from_relation_def(&x).unwrap())
+                    .flatten()
+                    .map(|x| x.from_col)
+                    .collect();
+                let ac_fields: Vec<_> = auto_complete
                     .into_iter()
+                    .map(|x| seaorm_admin::ForeignKeyField::new(
+                        &x,
+                        seaorm_admin::relation_def_is_nullable(
+                            &x,
+                            &#module :: Column::iter().collect(),
+                        ),
+                    ))
+                    .filter(|x| x.is_ok())
+                    .map(|x| x.unwrap())
+                    .map(|x| seaorm_admin::AdminField::Field(Box::new(x)))
+                    .collect();
+                let mut ex_fields: Vec<seaorm_admin::AdminField> = vec![#(#form_fields),*];
+                ac_col_set.extend(ex_fields
+                    .iter()
                     .map(|x| {
-                        let a = seaorm_admin::AdminField::create_from(&x, !keys.contains(&x.to_string()));
-                        if let Some(w) = widgets.remove(&x.to_string()) {
-                            (a, w)
-                        } else {
-                            (a, Box::new(seaorm_admin::DefaultWidget{}) as Box<dyn seaorm_admin::Widget>)
+                        match x {
+                            seaorm_admin::AdminField::Field(f) => f.fields(),
+                            _ => vec![],
                         }
-                    }).collect()
+                    }).flatten());
+
+                let mut fields: Vec<seaorm_admin::AdminField> = #ident::get_editable_fields()
+                    .into_iter()
+                    .filter(|x| !ac_col_set.contains(&x.to_string()))
+                    .filter(|x| !ac_col_set.contains(&x.to_string()))
+                    .map(|x| {
+                        seaorm_admin::get_default_field(&x.to_string(), &x.def().get_column_type())
+                    })
+                    .filter(|x| x.is_ok()).map(|x| x.unwrap()).collect();
+                fields.extend(ac_fields);
+                fields.extend(ex_fields);
+                fields
             }
         }))
     }
@@ -490,23 +490,27 @@ impl ModelAdminExpander {
             impl #ident {
             async fn list_impl(
                 conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                query: &seaorm_admin::ListQuery,
+                param: &seaorm_admin::ListParam,
             ) -> seaorm_admin::Result<(u64, Vec<seaorm_admin::Json>)> {
-                use seaorm_admin::sea_orm::{EntityTrait, QuerySelect, PaginatorTrait};
+                use seaorm_admin::sea_orm::{EntityTrait, QuerySelect, PaginatorTrait, QueryFilter};
 
                 let fields = #ident::get_fields();
                 let qs = #module::Entity::find();
-                let qs = if query.ordering.len() > 0 {
-                    seaorm_admin::set_ordering_from_query(qs, &query.ordering, &#ident::get_fields())?
+                let qs = if param.ordering.len() > 0 {
+                    seaorm_admin::set_ordering_from_query(qs, &param.ordering, &#ident::get_fields())?
                 } else {
                     seaorm_admin::set_ordering(qs, &#ident::get_ordering())?
                 };
-                let qs = seaorm_admin::filter_by_hash_map(qs, &fields, &query.filter)?;
-                let qs = seaorm_admin::search_by_queries(qs, &#ident::get_search_fields(), &query.queries)?;
+
+                let qs = if param.cond.is_empty() {
+                    qs
+                } else {
+                    qs.filter(param.cond.clone())
+                };
+                let qs = if let Some(offset) = param.offset { qs.offset(offset) } else { qs };
+                let qs = if let Some(limit) = param.limit { qs.limit(limit) } else { qs };
                 let count = qs.clone().count(conn).await?;
-                qs.offset(query.offset)
-                    .limit(query.limit)
-                    .all(conn).await?
+                qs.all(conn).await?
                     .into_iter()
                     .map(|x| #ident::convert_to_json_for_list(x, &fields))
                     .collect::<seaorm_admin::Result<Vec<_>>>()
@@ -516,6 +520,35 @@ impl ModelAdminExpander {
         ))
     }
 
+    // fn expand_list_by_key_impl(&self) -> Result {
+    //     let ident = &self.ident;
+    //     let module = &self.module;
+
+    //     Ok(quote!(
+    //         impl #ident {
+    //         async fn list_by_key_impl(
+    //             conn: &seaorm_admin::sea_orm::DatabaseConnection,
+    //             key: &seaorm_admin::Json,
+    //         ) -> seaorm_admin::Result<Vec<seaorm_admin::Json>> {
+    //             use seaorm_admin::sea_orm::{EntityTrait, PaginatorTrait, Iterable};
+
+    //             let fields = #ident::get_fields();
+    //             let qs = #module::Entity::find();
+    //             let qs = {
+    //                 let mut fm = #module::ActiveModel { ..Default::default() };
+    //                 seaorm_admin::set_from_json(&mut fm, &fields, key)?;
+    //                 seaorm_admin::filter_by_columns(qs, &#module :: Column::iter().collect(), &fm, false)?
+    //             };
+    //             qs.all(conn)
+    //                 .await?
+    //                 .into_iter()
+    //                 .map(|x| #ident::convert_to_json_for_list(x, &fields))
+    //                 .collect::<seaorm_admin::Result<Vec<_>>>()
+    //         }
+    //     }
+    //     ))
+    // }
+
     fn expand_get_impl(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
@@ -524,17 +557,18 @@ impl ModelAdminExpander {
             impl #ident {
             async fn get_impl(
                 conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                key: seaorm_admin::Json
+                cond: &seaorm_admin::sea_orm::Condition
             ) -> seaorm_admin::Result<Option<seaorm_admin::Json>> {
-                use seaorm_admin::sea_orm::EntityTrait;
+                use seaorm_admin::sea_orm::{EntityTrait, QueryFilter};
 
                 let fields = #ident::get_fields();
                 let qs = #module::Entity::find();
-                let qs = {
-                    let mut fm = #module::ActiveModel { ..Default::default() };
-                    seaorm_admin::set_from_json(&mut fm, &fields, &key)?;
-                    seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
-                };
+                // let qs = {
+                //     let mut fm = #module::ActiveModel { ..Default::default() };
+                //     seaorm_admin::set_from_json(&mut fm, &fields, key)?;
+                //     seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
+                // };
+                let qs = qs.filter(cond.clone());
                 Ok(if let Some(model) = qs.one(conn).await? {
                     Some(seaorm_admin::to_json(&model, &fields)?)
                 } else {
@@ -552,14 +586,14 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
                 async fn insert_impl(
-                    conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                    value: seaorm_admin::Json
+                    conn: &seaorm_admin::sea_orm::DatabaseTransaction,
+                    value: &seaorm_admin::Json
                 ) -> seaorm_admin::Result<seaorm_admin::Json> {
                     use seaorm_admin::sea_orm::{EntityTrait, ActiveModelTrait, TryIntoModel};
 
                     let fields = #ident::get_fields();
                     let mut model = #ident::get_initial_value();
-                    seaorm_admin::set_from_json(&mut model, &fields, &value)?;
+                    seaorm_admin::set_from_json(&mut model, &fields, value)?;
                     let saved: #module::Model = model.insert(conn).await?.try_into_model()?;
                     seaorm_admin::to_json(&saved, &fields)
                 }
@@ -574,14 +608,14 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
                 async fn update_impl(
-                    conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                    value: seaorm_admin::Json
+                    conn: &seaorm_admin::sea_orm::DatabaseTransaction,
+                    value: &seaorm_admin::Json
                 ) -> seaorm_admin::Result<seaorm_admin::Json> {
                     use seaorm_admin::sea_orm::{TryIntoModel, ActiveModelTrait, EntityTrait};
 
                     let fields = #ident::get_fields();
                     let mut model = #module::ActiveModel { ..Default::default() };
-                    seaorm_admin::set_from_json(&mut model, &fields, &value)?;
+                    seaorm_admin::set_from_json(&mut model, &fields, value)?;
                     let saved: #module::Model = model.save(conn).await?.try_into_model().unwrap();
                     seaorm_admin::to_json(&saved, &fields)
                 }
@@ -596,17 +630,18 @@ impl ModelAdminExpander {
         Ok(quote!(
             impl #ident {
             async fn delete_impl(
-                conn: &seaorm_admin::sea_orm::DatabaseConnection,
-                value: seaorm_admin::Json
+                conn: &seaorm_admin::sea_orm::DatabaseTransaction,
+                cond: &seaorm_admin::sea_orm::Condition,
             ) -> seaorm_admin::Result<u64> {
-                use seaorm_admin::sea_orm::{EntityTrait, ModelTrait};
+                use seaorm_admin::sea_orm::{EntityTrait, ModelTrait, QueryFilter};
 
                 let qs = #module::Entity::find();
-                let qs = {
-                    let mut fm = #module::ActiveModel { ..Default::default() };
-                    seaorm_admin::set_from_json(&mut fm, &#ident::get_fields(), &value)?;
-                    seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
-                };
+                // let qs = {
+                //     let mut fm = #module::ActiveModel { ..Default::default() };
+                //     seaorm_admin::set_from_json(&mut fm, &#ident::get_fields(), value)?;
+                //     seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
+                // };
+                let qs = qs.filter(cond.clone());
                 Ok(if let Some(model) = qs.one(conn).await? {
                     model.delete(conn).await?.rows_affected
                 } else {
@@ -625,7 +660,7 @@ impl ModelAdminExpander {
             self.expand_get_auto_complete()?,
             self.expand_get_ordering()?,
             self.expand_get_fields()?,
-            self.expand_get_form_fields()?,
+            self.expand_get_editable_fields()?,
             self.expand_get_keys()?,
             self.expand_get_search_fields()?,
             self.expand_get_list_per_page()?,
@@ -633,9 +668,9 @@ impl ModelAdminExpander {
             self.expand_impl()?,
             self.expand_to_str_impl()?,
             self.expand_to_json_for_list()?,
-            self.expand_create_form_fields_impl()?,
-            self.expand_update_form_fields_impl()?,
+            self.expand_get_form_fields_impl()?,
             self.expand_list_impl()?,
+            // self.expand_list_by_key_impl()?,
             self.expand_get_impl()?,
             self.expand_insert_impl()?,
             self.expand_update_impl()?,

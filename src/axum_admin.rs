@@ -1,3 +1,5 @@
+use crate::create_cond_from_json;
+
 use super::{json_overwrite_key, templates, Admin, ModelAdminTrait};
 use askama::Template;
 use axum::{
@@ -140,7 +142,7 @@ async fn list(
             let object_list = admin
                 .get_list_as_json(model, &request_info.query)
                 .await
-                .map_err(|_x: super::Error| StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
             Ok(HtmlOrJson::Json(Json(AnyData(object_list))))
         }
         RequestHeaderAccept::Html => {
@@ -161,6 +163,7 @@ async fn get_create_template(
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     let template = admin
         .get_create_template(model)
+        .await
         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Html(template.render().unwrap()))
 }
@@ -173,7 +176,7 @@ async fn create_model<'r>(
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
     Ok(return_json_object(
         model,
-        model.insert(&admin.get_connection(), data.0).await,
+        admin.create(model, &data.0, None).await,
     ))
 }
 
@@ -185,8 +188,10 @@ async fn get_update_template(
     let key = model
         .key_to_json(&id)
         .map_err(|_x| StatusCode::BAD_REQUEST)?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
+        .map_err(|_x| StatusCode::BAD_REQUEST)?;
     let row = model
-        .get(&admin.get_connection(), key)
+        .get(&admin.get_connection(), &cond)
         .await
         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
@@ -211,7 +216,7 @@ async fn update_model(
     let data = json_overwrite_key(&data.0, &key).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(return_json_object(
         model,
-        model.update(&admin.get_connection(), data).await,
+        admin.update(model, &data, None).await,
     ))
 }
 
@@ -223,14 +228,17 @@ async fn get_delete_template(
     let key = model
         .key_to_json(&id)
         .map_err(|_x| StatusCode::BAD_REQUEST)?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
+        .map_err(|_x| StatusCode::BAD_REQUEST)?;
     let row = model
-        .get(&admin.get_connection(), key)
+        .get(&admin.get_connection(), &cond)
         .await
         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
     let template = admin
         .get_delete_template(model, &row)
+        .await
         .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Html(template.render().unwrap()))
@@ -248,9 +256,7 @@ async fn delete_model(
 
     let data = json_overwrite_key(&data.0, &key).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(return_json(
-        model.delete(&admin.get_connection(), data).await,
-    ))
+    Ok(return_json(admin.delete(model, &data, None).await))
 }
 
 pub fn get_router() -> Router {

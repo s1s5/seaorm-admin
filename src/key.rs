@@ -1,4 +1,4 @@
-use crate::{CustomError, Error, Json, Result};
+use crate::{CustomError, Json, Result};
 
 // ----------------------------------------------------------------------------
 pub fn to_key_string<C>(columns: &Vec<C>, value: &Json) -> Result<String>
@@ -10,7 +10,7 @@ where
         .map(|c| {
             let v = value.get(c.to_string());
             if v.is_none() {
-                return Err(Box::new(CustomError::new("key not set")) as Error);
+                return Err(anyhow::anyhow!("key not set"));
             }
             b62encode(c, v.unwrap())
         })
@@ -50,7 +50,7 @@ where
         | sea_orm::ColumnType::String(_)
         | sea_orm::ColumnType::Text => value
             .as_str()
-            .ok_or(Box::new(CustomError::new("parse json error")) as Error)
+            .ok_or(anyhow::anyhow!("parse json error"))
             .map(|x| base_62::encode(x.as_bytes())),
         sea_orm::ColumnType::TinyInteger
         | sea_orm::ColumnType::SmallInteger
@@ -61,7 +61,7 @@ where
         | sea_orm::ColumnType::Unsigned
         | sea_orm::ColumnType::BigUnsigned => value
             .as_i64()
-            .ok_or(Box::new(CustomError::new("parse json error")) as Error)
+            .ok_or(anyhow::anyhow!("parse json error"))
             .map(|x| x.to_string()),
 
         // sea_orm::ColumnType::Float => {}
@@ -92,9 +92,7 @@ where
         // sea_orm::ColumnType::Cidr,
         // sea_orm::ColumnType::Inet,
         // sea_orm::ColumnType::MacAddr,
-        _ => Err(Box::new(CustomError::new(
-            "Unsupported Column type for key_to_str",
-        ))),
+        _ => Err(anyhow::anyhow!("Unsupported Column type for key_to_str",)),
     }
 }
 
@@ -146,6 +144,6 @@ where
             })?;
             Ok(serde_json::to_value(uuid::Uuid::from_slice(&bytes)?)?)
         }
-        _ => Err(Box::new(CustomError::new("b62decode"))),
+        _ => Err(anyhow::anyhow!("b62decode")),
     }
 }
