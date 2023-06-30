@@ -281,7 +281,11 @@ impl Admin {
             None
         };
 
-        let cur_txn = txn.unwrap_or(internal_txn.as_ref().unwrap());
+        let cur_txn = if txn.is_some() {
+            txn.unwrap()
+        } else {
+            internal_txn.as_ref().unwrap()
+        };
 
         // let txn = self.get_connection().begin().await?;
 
@@ -309,7 +313,11 @@ impl Admin {
             None
         };
 
-        let cur_txn = txn.unwrap_or(internal_txn.as_ref().unwrap());
+        let cur_txn = if txn.is_some() {
+            txn.unwrap()
+        } else {
+            internal_txn.as_ref().unwrap()
+        };
 
         let r = model.update(cur_txn, data).await?;
         let data = json_overwrite_key(data, &r)?;
@@ -334,7 +342,11 @@ impl Admin {
         } else {
             None
         };
-        let cur_txn = txn.unwrap_or(internal_txn.as_ref().unwrap());
+        let cur_txn = if txn.is_some() {
+            txn.unwrap()
+        } else {
+            internal_txn.as_ref().unwrap()
+        };
         let cond = create_cond_from_json(&model.get_primary_keys(), &data, true)?;
         let resp = model.delete(cur_txn, &cond).await?;
         if let Some(txn_data) = internal_txn {

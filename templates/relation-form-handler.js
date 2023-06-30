@@ -1,7 +1,7 @@
 window.addEventListener("load", (event) => {
   function create_row(target) {
     let state_el = document.getElementById(`${target}.state-id`);
-    let l = state_el.value.split(",");
+    let l = state_el.value.split(",").filter((e) => e.length);
     let index = l.length;
     l.push("C");
     state_el.value = l.join(",");
@@ -12,7 +12,7 @@ window.addEventListener("load", (event) => {
     let target = e.attributes["data-target"].value;
     let index = parseInt(e.attributes["data-index"].value);
     let state_el = document.getElementById(`${target}.state-id`);
-    let l = state_el.value.split(",");
+    let l = state_el.value.split(",").filter((e) => e.length);
     let w = document.getElementById(`${target}.${index}`);
     if (l[index] == "U") {
       l[index] = "D";

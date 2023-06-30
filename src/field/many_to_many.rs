@@ -86,7 +86,7 @@ fn get_list_from_input_json(
 ) -> Result<Vec<String>> {
     let v = value.get(key).ok_or(anyhow::anyhow!("key not found"))?;
     let v = v.as_str().ok_or(anyhow::anyhow!("value is not str"))?;
-    Ok(v.split(",").map(|x| x.to_string()).collect())
+    Ok(v.split(",").map(|x| x.to_string()).filter(|x| x.len() > 0).collect())
 }
 
 fn is_equal_vec(vl: &Vec<String>, vr: &Vec<String>) -> bool {
@@ -160,7 +160,9 @@ impl RelationTrait for ManyToMany {
                 .get_model(&extract_table_name(&self.to_def.to_tbl)?)
                 .ok_or(anyhow::anyhow!("table not found"))?;
 
-            let (_size, related) = to_model
+            let (_size, related) = if cond.is_empty() {
+                (0, vec![])
+            } else {to_model
                 .list(
                     admin.get_connection(),
                     &ListParam {
@@ -170,7 +172,8 @@ impl RelationTrait for ManyToMany {
                         limit: None,
                     },
                 )
-                .await?;
+                .await?
+            };
 
             template.cols = template
                 .cols
