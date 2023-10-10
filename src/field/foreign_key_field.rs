@@ -24,6 +24,7 @@ pub fn identity_to_vec_string(ident: &sea_orm::Identity) -> Vec<String> {
         sea_orm::Identity::Ternary(i0, i1, i2) => {
             vec![i0.to_string(), i1.to_string(), i2.to_string()]
         }
+        sea_orm::Identity::Many(v) => v.iter().map(|x| x.to_string()).collect(),
     }
 }
 
@@ -80,9 +81,7 @@ where
         .iter()
         .map(|x| (x.to_string(), x.def().is_null()))
         .collect();
-    def.from_col
-        .clone()
-        .into_iter()
+    IdenList::into_iter(def.from_col.clone())
         .any(|x| m.get(&x.to_string()).map(|x| x.clone()).unwrap_or(false))
 }
 

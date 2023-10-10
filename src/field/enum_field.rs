@@ -4,14 +4,16 @@ use askama::DynTemplate;
 use async_trait::async_trait;
 use sea_orm::ColumnTrait;
 use std::collections::HashMap;
-
+use sea_orm::ActiveEnum;
 pub struct EnumField(AdminFormSelect);
 
 pub fn enum_field<C, T>(col: C, it: T) -> AdminField
 where
     C: ColumnTrait,
     T: Iterator,
-    <T as Iterator>::Item: std::fmt::Debug + std::fmt::Display,
+    <T as Iterator>::Item: std::fmt::Debug,
+    <T as Iterator>::Item: sea_orm::ActiveEnum,
+    <<T as Iterator>::Item as ActiveEnum>::Value: std::fmt::Display,
 {
     AdminField::Field(Box::new(EnumField::from_enum(col, it)))
 }
@@ -33,13 +35,15 @@ impl EnumField {
     where
         C: ColumnTrait,
         T: Iterator,
-        <T as Iterator>::Item: std::fmt::Debug + std::fmt::Display,
+        <T as Iterator>::Item: std::fmt::Debug,
+        <T as Iterator>::Item: sea_orm::ActiveEnum,
+        <<T as Iterator>::Item as ActiveEnum>::Value: std::fmt::Display,
     {
         Self::new(
             &col.to_string(),
             it.map(|x| {
                 (
-                    x.to_string().trim_matches('\'').to_string(),
+                    format!("{}", x.to_value()),
                     format!("{:?}", x),
                 )
             })

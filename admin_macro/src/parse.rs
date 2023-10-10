@@ -3,7 +3,7 @@ use syn::{Expr, ExprLit, ExprPath, Ident, Lit, MetaNameValue};
 
 type Result<T> = std::result::Result<T, syn::Error>;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum IdentOrLiteral {
     Path(ExprPath),
     Literal(ExprLit),

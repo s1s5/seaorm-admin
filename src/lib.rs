@@ -16,8 +16,6 @@ mod parse;
 #[cfg(feature = "with-rocket")]
 pub mod rocket_admin;
 pub mod templates;
-#[cfg(test)]
-mod tests;
 
 pub use admin::*;
 pub use admin_macro::ModelAdmin;

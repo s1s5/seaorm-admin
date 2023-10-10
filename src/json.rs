@@ -3,7 +3,7 @@ use base64::Engine;
 use log::warn;
 #[cfg(feature = "with-rust_decimal")]
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, DeriveIden, EntityTrait, ModelTrait};
+use sea_orm::{ActiveModelTrait, DeriveIden, EntityTrait, ModelTrait, Iden};
 
 // ----------------------------------------------------------------------------
 pub fn set_from_json<M>(

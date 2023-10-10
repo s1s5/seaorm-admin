@@ -520,35 +520,6 @@ impl ModelAdminExpander {
         ))
     }
 
-    // fn expand_list_by_key_impl(&self) -> Result {
-    //     let ident = &self.ident;
-    //     let module = &self.module;
-
-    //     Ok(quote!(
-    //         impl #ident {
-    //         async fn list_by_key_impl(
-    //             conn: &seaorm_admin::sea_orm::DatabaseConnection,
-    //             key: &seaorm_admin::Json,
-    //         ) -> seaorm_admin::Result<Vec<seaorm_admin::Json>> {
-    //             use seaorm_admin::sea_orm::{EntityTrait, PaginatorTrait, Iterable};
-
-    //             let fields = #ident::get_fields();
-    //             let qs = #module::Entity::find();
-    //             let qs = {
-    //                 let mut fm = #module::ActiveModel { ..Default::default() };
-    //                 seaorm_admin::set_from_json(&mut fm, &fields, key)?;
-    //                 seaorm_admin::filter_by_columns(qs, &#module :: Column::iter().collect(), &fm, false)?
-    //             };
-    //             qs.all(conn)
-    //                 .await?
-    //                 .into_iter()
-    //                 .map(|x| #ident::convert_to_json_for_list(x, &fields))
-    //                 .collect::<seaorm_admin::Result<Vec<_>>>()
-    //         }
-    //     }
-    //     ))
-    // }
-
     fn expand_get_impl(&self) -> Result {
         let ident = &self.ident;
         let module = &self.module;
@@ -563,11 +534,6 @@ impl ModelAdminExpander {
 
                 let fields = #ident::get_fields();
                 let qs = #module::Entity::find();
-                // let qs = {
-                //     let mut fm = #module::ActiveModel { ..Default::default() };
-                //     seaorm_admin::set_from_json(&mut fm, &fields, key)?;
-                //     seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
-                // };
                 let qs = qs.filter(cond.clone());
                 Ok(if let Some(model) = qs.one(conn).await? {
                     Some(seaorm_admin::to_json(&model, &fields)?)
@@ -636,11 +602,6 @@ impl ModelAdminExpander {
                 use seaorm_admin::sea_orm::{EntityTrait, ModelTrait, QueryFilter};
 
                 let qs = #module::Entity::find();
-                // let qs = {
-                //     let mut fm = #module::ActiveModel { ..Default::default() };
-                //     seaorm_admin::set_from_json(&mut fm, &#ident::get_fields(), value)?;
-                //     seaorm_admin::filter_by_columns(qs, &#ident::get_keys(), &fm, true)?
-                // };
                 let qs = qs.filter(cond.clone());
                 Ok(if let Some(model) = qs.one(conn).await? {
                     model.delete(conn).await?.rows_affected
@@ -670,7 +631,6 @@ impl ModelAdminExpander {
             self.expand_to_json_for_list()?,
             self.expand_get_form_fields_impl()?,
             self.expand_list_impl()?,
-            // self.expand_list_by_key_impl()?,
             self.expand_get_impl()?,
             self.expand_insert_impl()?,
             self.expand_update_impl()?,
