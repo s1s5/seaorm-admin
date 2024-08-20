@@ -17,8 +17,7 @@ tokio = { version = "^1", features = ["macros", "rt-multi-thread", "io-util"] }
 log = "0.4"
 base64 = "0"
 serde_json = { version = "1" }
-rocket = { version = "=0.5.0-rc.3", default-features = false, optional = true }
-axum = { version = "0.6", features = ["default", "headers"], optional = true }
+axum = { version = "^0.6", features = ["default", "headers"], optional = true }
 bigdecimal = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4.20", default-features = false, optional = true }
 rust_decimal = { version = "1", default-features = false, optional = true }
@@ -28,7 +27,7 @@ anyhow = "*"
 
 
 [dependencies.sea-orm]
-version = "*"
+version = "^0"
 features = [
   "sqlx-postgres",
   "runtime-tokio-rustls",
@@ -42,7 +41,6 @@ features = [
 seaorm-admin = { path = ".", features = [
   "default",
   "tests-cfg",
-  "with-rocket",
   "with-axum",
 ] }
 
@@ -51,6 +49,5 @@ default = ["with-chrono", "with-rust_decimal", "with-uuid"]
 with-chrono = ["chrono", "sea-orm/with-chrono", "sea-orm/with-time"]
 with-rust_decimal = ["rust_decimal", "sea-orm/with-rust_decimal"]
 with-uuid = ["uuid", "sea-orm/with-uuid"]
-with-rocket = ["rocket"]
 with-axum = ["axum"]
 tests-cfg = []

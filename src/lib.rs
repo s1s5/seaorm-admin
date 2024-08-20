@@ -13,8 +13,6 @@ mod filter;
 mod json;
 mod key;
 mod parse;
-#[cfg(feature = "with-rocket")]
-pub mod rocket_admin;
 pub mod templates;
 
 pub use admin::*;

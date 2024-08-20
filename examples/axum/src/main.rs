@@ -63,7 +63,7 @@ struct TagAdmin;
 struct TagRelationAdmin;
 
 #[tokio::main]
-async fn main() -> std::result::Result<(), hyper::Error> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
     env_logger::init();
 
     let connection = Arc::new(
@@ -90,5 +90,6 @@ async fn main() -> std::result::Result<(), hyper::Error> {
     println!("listening {:?}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
-        .await
+        .await?;
+    Ok(())
 }

@@ -115,9 +115,11 @@ struct AuthorAdmin;
 
 ### use with Rocket
 ```Rust
-use entity::author;
-use seaorm_admin::rocket_admin::get_admin_routes;
-use seaorm_admin::{Admin, ModelAdmin};
+use axum::{extract::Extension, Router};
+use entity::{author, post, tag, tag_relation, test_model};
+use sea_orm::Set;
+use seaorm_admin::{enum_field, inline_field, m2m_field, Admin, ModelAdmin};
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 #[derive(ModelAdmin, Default)]
@@ -125,22 +127,29 @@ use std::sync::Arc;
 struct AuthorAdmin;
 
 #[tokio::main]
-async fn main() -> std::result::Result<(), rocket::Error> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
   let connection = Arc::new(
       sea_orm::Database::connect(std::env::var("DATABASE_URL").unwrap())
           .await
           .expect("Could not connect to database. Please set DATABASE_URL"),
   );
-  
+
   let mut admin = Admin::new(connection, "/admin");
   admin.add_model(AuthorAdmin);
   
-  rocket::build()
-      .mount(admin.sub_path(), get_admin_routes())
-      .manage(admin)
-      .launch()
-      .await
-      .map(|_| ())
+  let app = Router::new()
+        .nest(
+            &format!("{}/", admin.sub_path()),
+            seaorm_admin::axum_admin::get_router(),
+        )
+        .layer(Extension(Arc::new(admin)));
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
+    println!("listening {:?}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await?;
+    Ok(())
 }
 ```
 

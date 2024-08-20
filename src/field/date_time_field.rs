@@ -56,7 +56,7 @@ impl FieldTrait for DateTimeField {
                     raw: value.clone(),
                     datetime_without_seconds: v.format("%Y-%m-%dT%H:%M").to_string(),
                     seconds: v.time().second() as f64
-                        + (v.timestamp_subsec_micros() as f64) * 1.0e-6,
+                        + (v.and_utc().timestamp_subsec_micros() as f64) * 1.0e-6,
                     timezone: 0,
                 })
             } else {

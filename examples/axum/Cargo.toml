@@ -11,7 +11,7 @@ edition = "2021"
 [dependencies]
 entity = { path = "../entity" }
 seaorm-admin = { path="../../", features=["default", "with-axum"] }
-axum = { version = "0" }
+axum = { version = "^0.6" }
 tokio = { version = "^1", features = ["macros", "rt-multi-thread", "io-util"] }
 env_logger = "0.10.0"
 hyper = "*"
