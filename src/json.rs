@@ -269,6 +269,12 @@ where
         // sea_orm::ColumnType::Cidr => {}
         // sea_orm::ColumnType::Inet => {}
         // sea_orm::ColumnType::MacAddr => {}
+        // Unsupported column type found. col=ColumnDef { col_type: Enum { name: SeaRc(threeate_gads_conversion_type), variants: [SeaRc(gbraid), SeaRc(gclid), SeaRc(wbraid)] }, null: false, unique: false, indexed: false, default: None, comment: None }, v=String("gclid")
+        sea_orm::ColumnType::Enum { name, variants } => {
+            let v: String = serde_json::from_value(v.clone())?;
+            sea_orm::Value::String(Some(Box::new(v)))
+        }
+
         _ => {
             warn!(
                 "Unsupported column type found. col={:?}, v={:?}",
