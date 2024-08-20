@@ -9,6 +9,7 @@ use axum::{
     routing::get,
     Router, TypedHeader,
 };
+use log::error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 
@@ -90,13 +91,16 @@ fn return_json_object(
                 "data": data,
             }))),
         ),
-        Err(error) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(AnyData(serde_json::json!({
-                "status": "failed",
-                "error": format!("{}", error)
-            }))),
-        ),
+        Err(error) => {
+            error!("Error: {error:?}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AnyData(serde_json::json!({
+                    "status": "failed",
+                    "error": format!("{}", error)
+                }))),
+            )
+        }
     }
 }
 fn return_json<T>(r: super::Result<T>) -> (StatusCode, Json<AnyData>) {
@@ -107,20 +111,25 @@ fn return_json<T>(r: super::Result<T>) -> (StatusCode, Json<AnyData>) {
                 "status": "ok"
             }))),
         ),
-        Err(error) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(AnyData(serde_json::json!({
-                "status": "failed",
-                "error": format!("{}", error)
-            }))),
-        ),
+        Err(error) => {
+            error!("Error: {error:?}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AnyData(serde_json::json!({
+                    "status": "failed",
+                    "error": format!("{}", error)
+                }))),
+            )
+        }
     }
 }
 
 // ----- routes -----
 async fn index(Extension(admin): Extension<Arc<Admin>>) -> Result<Html<String>, StatusCode> {
-    let template =
-        templates::AdminIndex::new(&admin.site).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let template = templates::AdminIndex::new(&admin.site).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     Ok(Html(template.render().unwrap()))
 }
 
@@ -142,14 +151,20 @@ async fn list(
             let object_list = admin
                 .get_list_as_json(model, &request_info.query)
                 .await
-                .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(|error| {
+                    error!("Error: {error:?}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
             Ok(HtmlOrJson::Json(Json(AnyData(object_list))))
         }
         RequestHeaderAccept::Html => {
             let template = admin
                 .get_list_template(model, &request_info.query)
                 .await
-                .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(|error| {
+                    error!("Error: {error:?}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
 
             Ok(HtmlOrJson::Html(Html(template.render().unwrap())))
         }
@@ -161,10 +176,10 @@ async fn get_create_template(
     Extension(admin): Extension<Arc<Admin>>,
 ) -> Result<Html<String>, StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
-    let template = admin
-        .get_create_template(model)
-        .await
-        .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let template = admin.get_create_template(model).await.map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     Ok(Html(template.render().unwrap()))
 }
 
@@ -185,21 +200,30 @@ async fn get_update_template(
     Extension(admin): Extension<Arc<Admin>>,
 ) -> Result<Html<String>, StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
-    let key = model
-        .key_to_json(&id)
-        .map_err(|_x| StatusCode::BAD_REQUEST)?;
-    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
-        .map_err(|_x| StatusCode::BAD_REQUEST)?;
+    let key = model.key_to_json(&id).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::BAD_REQUEST
+    })?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::BAD_REQUEST
+    })?;
     let row = model
         .get(&admin.get_connection(), &cond)
         .await
-        .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|error| {
+            error!("Error: {error:?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
         .ok_or(StatusCode::NOT_FOUND)?;
 
     let template = admin
         .get_update_template(model, &row)
         .await
-        .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|error| {
+            error!("Error: {error:?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     Ok(Html(template.render().unwrap()))
 }
@@ -210,10 +234,14 @@ async fn update_model(
     Json(data): Json<AnyData>,
 ) -> Result<(StatusCode, Json<AnyData>), StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
-    let key = model
-        .key_to_json(&id)
-        .map_err(|_x| StatusCode::BAD_REQUEST)?;
-    let data = json_overwrite_key(&data.0, &key).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let key = model.key_to_json(&id).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::BAD_REQUEST
+    })?;
+    let data = json_overwrite_key(&data.0, &key).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     Ok(return_json_object(
         model,
         admin.update(model, &data, None).await,
@@ -225,21 +253,30 @@ async fn get_delete_template(
     Extension(admin): Extension<Arc<Admin>>,
 ) -> Result<Html<String>, StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
-    let key = model
-        .key_to_json(&id)
-        .map_err(|_x| StatusCode::BAD_REQUEST)?;
-    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true)
-        .map_err(|_x| StatusCode::BAD_REQUEST)?;
+    let key = model.key_to_json(&id).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::BAD_REQUEST
+    })?;
+    let cond = create_cond_from_json(&model.get_primary_keys(), &key, true).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::BAD_REQUEST
+    })?;
     let row = model
         .get(&admin.get_connection(), &cond)
         .await
-        .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|error| {
+            error!("Error: {error:?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
         .ok_or(StatusCode::NOT_FOUND)?;
 
     let template = admin
         .get_delete_template(model, &row)
         .await
-        .map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|error| {
+            error!("Error: {error:?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     Ok(Html(template.render().unwrap()))
 }
@@ -250,11 +287,15 @@ async fn delete_model(
     Json(data): Json<AnyData>,
 ) -> Result<(StatusCode, Json<AnyData>), StatusCode> {
     let model = admin.models.get(&model).ok_or(StatusCode::NOT_FOUND)?;
-    let key = model
-        .key_to_json(&id)
-        .map_err(|_x| StatusCode::BAD_REQUEST)?;
+    let key = model.key_to_json(&id).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::BAD_REQUEST
+    })?;
 
-    let data = json_overwrite_key(&data.0, &key).map_err(|_x| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let data = json_overwrite_key(&data.0, &key).map_err(|error| {
+        error!("Error: {error:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(return_json(admin.delete(model, &data, None).await))
 }

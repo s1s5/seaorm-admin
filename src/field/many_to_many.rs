@@ -10,7 +10,7 @@ use crate::{
 use crate::{Admin, Json, Result};
 use askama::DynTemplate;
 use async_trait::async_trait;
-use sea_orm::{Condition, DatabaseConnection, DatabaseTransaction,  RelationDef};
+use sea_orm::{Condition, DatabaseConnection, DatabaseTransaction, RelationDef};
 
 pub fn m2m_field(name: &str, from_def: RelationDef, to_def: RelationDef) -> AdminField {
     AdminField::Relation(Box::new(ManyToMany::new(name, from_def, to_def)))
@@ -86,7 +86,10 @@ fn get_list_from_input_json(
 ) -> Result<Vec<String>> {
     let v = value.get(key).ok_or(anyhow::anyhow!("key not found"))?;
     let v = v.as_str().ok_or(anyhow::anyhow!("value is not str"))?;
-    Ok(v.split(",").map(|x| x.to_string()).filter(|x| x.len() > 0).collect())
+    Ok(v.split(",")
+        .map(|x| x.to_string())
+        .filter(|x| x.len() > 0)
+        .collect())
 }
 
 fn is_equal_vec(vl: &Vec<String>, vr: &Vec<String>) -> bool {
@@ -124,11 +127,14 @@ impl RelationTrait for ManyToMany {
         if let Some(parent_value) = parent_value {
             let parent_object = parent_value
                 .as_object()
-                .ok_or(anyhow::anyhow!("invalid json"))?;
+                .ok_or(anyhow::anyhow!("invalid json => {:?}", parent_value))?;
 
             let model = admin
                 .get_model(&extract_table_name(&self.from_def.from_tbl)?)
-                .ok_or(anyhow::anyhow!("table not found"))?;
+                .ok_or(anyhow::anyhow!(
+                    "table not found {:?}. Please add tbl to admin",
+                    extract_table_name(&self.from_def.from_tbl)
+                ))?;
 
             let cur_list = self
                 .list_related(model, admin.get_connection(), parent_object)
@@ -158,21 +164,25 @@ impl RelationTrait for ManyToMany {
 
             let to_model = admin
                 .get_model(&extract_table_name(&self.to_def.to_tbl)?)
-                .ok_or(anyhow::anyhow!("table not found"))?;
+                .ok_or(anyhow::anyhow!(
+                    "table not found: {:?}. Please add tbl to admin",
+                    extract_table_name(&self.to_def.to_tbl)
+                ))?;
 
             let (_size, related) = if cond.is_empty() {
                 (0, vec![])
-            } else {to_model
-                .list(
-                    admin.get_connection(),
-                    &ListParam {
-                        cond,
-                        ordering: vec![],
-                        offset: None,
-                        limit: None,
-                    },
-                )
-                .await?
+            } else {
+                to_model
+                    .list(
+                        admin.get_connection(),
+                        &ListParam {
+                            cond,
+                            ordering: vec![],
+                            offset: None,
+                            limit: None,
+                        },
+                    )
+                    .await?
             };
 
             template.cols = template
