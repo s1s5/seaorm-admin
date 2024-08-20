@@ -15,7 +15,7 @@ serde = { version = "1", features = ["derive"] }
 admin_macro = { path = "./admin_macro" }
 tokio = { version = "^1", features = ["macros", "rt-multi-thread", "io-util"] }
 log = "0.4"
-base64 = "0"
+base64 = "^0.21"
 serde_json = { version = "1" }
 axum = { version = "^0.6", features = ["default", "headers"], optional = true }
 bigdecimal = { version = "0.3", default-features = false, optional = true }
