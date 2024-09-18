@@ -4,7 +4,7 @@ use super::{templates, AdminField, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeSet, HashMap, HashSet},
     ops::Deref,
 };
 
@@ -376,6 +376,62 @@ impl Admin {
                     FormType::DELETE,
                 )
                 .await?,
+        })
+    }
+}
+
+#[derive(Default)]
+pub struct AdminBuilder {
+    models: Vec<Box<dyn ModelAdminTrait + Send + Sync>>,
+}
+
+impl AdminBuilder {
+    pub fn add_model<T>(mut self, model_admin: T) -> Self
+    where
+        T: ModelAdminTrait + Send + Sync + 'static,
+    {
+        self.models.push(Box::new(model_admin));
+        self
+    }
+
+    pub fn build<C>(self, conn: C, sub_path: &str) -> Result<Admin>
+    where
+        C: Deref<Target = DatabaseConnection> + Sync + Send + 'static,
+    {
+        let mut models = HashMap::new();
+        let mut site = templates::AdminSite {
+            title: "Admin".into(),
+            models: Vec::new(),
+            sub_path: sub_path.trim_end_matches('/').to_string(),
+        };
+        let mut tables = HashSet::new();
+        let mut related_tables = HashSet::new();
+        for model_admin in self.models {
+            let table_name: String = model_admin.get_table_name().into();
+            tables.insert(table_name.clone());
+            for form_field in model_admin.get_form_fields() {
+                match form_field {
+                    AdminField::Relation(r) => {
+                        related_tables.extend(r.related_tables()?.into_iter());
+                    }
+                    _ => {}
+                }
+            }
+
+            site.models.push(table_name.clone());
+            models.insert(table_name.clone(), model_admin);
+        }
+
+        let shortage: Vec<String> = related_tables.difference(&tables).cloned().collect();
+        anyhow::ensure!(
+            shortage.is_empty(),
+            "some tables are not found {shortage:?}"
+        );
+
+        Ok(Admin {
+            conn: Box::new(ConnectorImpl { conn }),
+            models,
+            site,
         })
     }
 }

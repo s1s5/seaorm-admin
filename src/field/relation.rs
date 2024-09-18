@@ -13,13 +13,8 @@ use async_trait::async_trait;
 use sea_orm::{DatabaseTransaction, RelationDef};
 use std::collections::HashSet;
 
-pub fn inline_field(name: &str, rdef: RelationDef, multiple: bool) -> AdminField
-{
-    AdminField::Relation(Box::new(Relation::new(
-        name,
-        rdef,
-        multiple,
-    )))
+pub fn inline_field(name: &str, rdef: RelationDef, multiple: bool) -> AdminField {
+    AdminField::Relation(Box::new(Relation::new(name, rdef, multiple)))
 }
 
 pub struct Relation {
@@ -40,6 +35,15 @@ impl Relation {
 
 #[async_trait]
 impl RelationTrait for Relation {
+    fn related_tables(&self) -> Result<HashSet<String>> {
+        vec![
+            extract_table_name(&self.def.to_tbl),
+            extract_table_name(&self.def.from_tbl),
+        ]
+        .into_iter()
+        .collect()
+    }
+
     async fn get_template(
         &self,
         admin: &Admin,

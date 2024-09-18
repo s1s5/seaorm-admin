@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::{foreign_key_field::extract_table_name, AdminField, RelationTrait};
 use crate::field::foreign_key_field::identity_to_vec_string;
 use crate::templates::{
@@ -105,6 +107,17 @@ fn check_exists(key: &Vec<String>, source: &Vec<Vec<String>>) -> bool {
 
 #[async_trait]
 impl RelationTrait for ManyToMany {
+    fn related_tables(&self) -> Result<HashSet<String>> {
+        vec![
+            extract_table_name(&self.from_def.to_tbl),
+            extract_table_name(&self.from_def.from_tbl),
+            extract_table_name(&self.to_def.to_tbl),
+            extract_table_name(&self.to_def.from_tbl),
+        ]
+        .into_iter()
+        .collect()
+    }
+
     async fn get_template(
         &self,
         admin: &Admin,

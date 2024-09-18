@@ -1,7 +1,7 @@
 use axum::{extract::Extension, Router};
 use entity::{author, post, tag, tag_relation, test_model};
 use sea_orm::Set;
-use seaorm_admin::{enum_field, inline_field, m2m_field, Admin, ModelAdmin};
+use seaorm_admin::{enum_field, inline_field, m2m_field, Admin, AdminBuilder, ModelAdmin};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -72,12 +72,13 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
             .expect("Could not connect to database. Please set DATABASE_URL"),
     );
 
-    let mut admin = Admin::new(connection, "/admin");
-    admin.add_model(AuthorAdmin);
-    admin.add_model(PostAdmin);
-    admin.add_model(TestAdmin);
-    admin.add_model(TagAdmin);
-    admin.add_model(TagRelationAdmin);
+    let admin = AdminBuilder::default()
+        .add_model(AuthorAdmin)
+        .add_model(PostAdmin)
+        .add_model(TestAdmin)
+        .add_model(TagAdmin)
+        .add_model(TagRelationAdmin)
+        .build(connection, "/admin")?;
 
     let app = Router::new()
         .nest(

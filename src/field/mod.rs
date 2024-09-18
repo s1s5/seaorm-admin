@@ -10,6 +10,8 @@ mod textarea_field;
 mod timestamp_field;
 mod tool;
 
+use std::collections::HashSet;
+
 use super::{Json, Result};
 use crate::Admin;
 use askama::DynTemplate;
@@ -62,6 +64,8 @@ pub trait FieldTrait {
 
 #[async_trait]
 pub trait RelationTrait {
+    fn related_tables(&self) -> Result<HashSet<String>>;
+
     async fn get_template(
         &self,
         admin: &Admin,
