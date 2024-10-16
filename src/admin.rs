@@ -4,7 +4,7 @@ use super::{templates, AdminField, Json, ModelAdminTrait, Result};
 use askama::DynTemplate;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     ops::Deref,
 };
 

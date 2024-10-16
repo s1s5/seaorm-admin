@@ -3,7 +3,7 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "String(None)")]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
 pub enum Category {
     #[sea_orm(string_value = "B")]
     Big,
@@ -48,7 +48,7 @@ pub struct Model {
     pub timestamp_with_time_zone_f: Option<DateTimeWithTimeZone>,
     pub time_f: Option<Time>,
     pub date_f: Option<Date>,
-    #[sea_orm(column_type = "Binary(BlobSize::Blob(None))", nullable)]
+    #[sea_orm(column_type = "Binary(256)", nullable)]
     pub binary_f: Option<Vec<u8>>,
     #[sea_orm(column_type = "custom(\"bit varying\")", nullable)]
     pub var_binary_f: Option<String>,

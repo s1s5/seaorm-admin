@@ -4,17 +4,21 @@ use super::{
 };
 use crate::Result;
 use log::warn;
-use sea_orm::ColumnType;
+use sea_orm::{prelude::StringLen, ColumnType};
 
 pub fn get_default_field(name: &str, column_type: &ColumnType) -> Result<AdminField> {
     Ok(AdminField::Field(match column_type {
-        sea_orm::ColumnType::Char(o) | sea_orm::ColumnType::String(o) => {
+        sea_orm::ColumnType::Char(o) => {
             if let Some(max_length) = o {
                 Box::new(InputField::new_for_char(name, *max_length))
             } else {
                 Box::new(TextareaField::new(name))
             }
         }
+        sea_orm::ColumnType::String(o) => match o {
+            StringLen::N(max_length) => Box::new(InputField::new_for_char(name, *max_length)),
+            StringLen::Max | StringLen::None => Box::new(TextareaField::new(name)),
+        },
         sea_orm::ColumnType::Text | sea_orm::ColumnType::Json | sea_orm::ColumnType::JsonBinary => {
             Box::new(TextareaField::new(name))
         }
@@ -35,7 +39,7 @@ pub fn get_default_field(name: &str, column_type: &ColumnType) -> Result<AdminFi
 
         sea_orm::ColumnType::Time => Box::new(InputField::new_with_type(name, "time")),
         sea_orm::ColumnType::Date => Box::new(InputField::new_with_type(name, "date")),
-        sea_orm::ColumnType::Year(_o) => Box::new(InputField::new_with_type(name, "number")),
+        sea_orm::ColumnType::Year => Box::new(InputField::new_with_type(name, "number")),
         sea_orm::ColumnType::Binary(_) | sea_orm::ColumnType::VarBinary(_) => {
             // pattern="^[A-Za-z0-9+/]{4}*[A-Za-z0-9+/]{4}([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
             Box::new(TextareaField::new(name))

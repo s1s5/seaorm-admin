@@ -1,7 +1,7 @@
 use axum::{extract::Extension, Router};
 use entity::{author, post, tag, tag_relation, test_model};
 use sea_orm::Set;
-use seaorm_admin::{enum_field, inline_field, m2m_field, Admin, AdminBuilder, ModelAdmin};
+use seaorm_admin::{enum_field, inline_field, m2m_field, AdminBuilder, ModelAdmin};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -88,9 +88,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
         .layer(Extension(Arc::new(admin)));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
-    println!("listening {:?}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    println!("listening {addr:?}");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app).await?;
+
     Ok(())
 }

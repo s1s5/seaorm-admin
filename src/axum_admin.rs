@@ -7,8 +7,9 @@ use axum::{
     http::StatusCode,
     response::{Html, IntoResponse, Json, Response},
     routing::get,
-    Router, TypedHeader,
+    Router,
 };
+use axum_extra::{headers, TypedHeader};
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
@@ -48,20 +49,18 @@ enum RequestHeaderAccept {
     Html,
 }
 
-impl axum::headers::Header for RequestHeaderAccept {
-    fn name() -> &'static axum::headers::HeaderName {
+impl headers::Header for RequestHeaderAccept {
+    fn name() -> &'static headers::HeaderName {
         &axum::http::header::ACCEPT
     }
 
-    fn decode<'i, I>(values: &mut I) -> Result<Self, axum::headers::Error>
+    fn decode<'i, I>(values: &mut I) -> Result<Self, headers::Error>
     where
         Self: Sized,
         I: Iterator<Item = &'i axum::http::HeaderValue>,
     {
-        let value = values.next().ok_or_else(axum::headers::Error::invalid)?;
-        let value = value
-            .to_str()
-            .map_err(|_| axum::headers::Error::invalid())?;
+        let value = values.next().ok_or_else(headers::Error::invalid)?;
+        let value = value.to_str().map_err(|_| headers::Error::invalid())?;
 
         if value.contains("json") {
             Ok(RequestHeaderAccept::Json)

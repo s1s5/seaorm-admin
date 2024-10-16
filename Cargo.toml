@@ -17,7 +17,8 @@ tokio = { version = "^1", features = ["macros", "rt-multi-thread", "io-util"] }
 log = "0.4"
 base64 = "^0.21"
 serde_json = { version = "1" }
-axum = { version = "^0.6", features = ["default", "headers"], optional = true }
+axum = { version = "^0.7", features = ["default"], optional = true }
+axum-extra = { version = "*", features = ["typed-header"] }
 bigdecimal = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4.20", default-features = false, optional = true }
 rust_decimal = { version = "1", default-features = false, optional = true }
@@ -27,7 +28,7 @@ anyhow = "*"
 
 
 [dependencies.sea-orm]
-version = "^0"
+version = "^1"
 features = [
   "sqlx-postgres",
   "runtime-tokio-rustls",

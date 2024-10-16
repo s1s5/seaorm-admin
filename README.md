@@ -134,8 +134,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
           .expect("Could not connect to database. Please set DATABASE_URL"),
   );
 
-  let mut admin = Admin::new(connection, "/admin");
-  admin.add_model(AuthorAdmin);
+  let admin = AdminBuilder::default()
+      .add_model(AuthorAdmin)
+      .build(connection, "/admin")?;
   
   let app = Router::new()
         .nest(

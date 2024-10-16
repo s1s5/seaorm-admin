@@ -11,5 +11,11 @@ edition = "2021"
 [dependencies]
 
 [dependencies.sea-orm]
-version = "^0"
-features = [  "sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "debug-print" ]
+version = "^1"
+features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "macros",
+    "mock",
+    "debug-print",
+]
