@@ -33,7 +33,6 @@ features = [
   "sqlx-postgres",
   "runtime-tokio-rustls",
   "macros",
-  "mock",
   "debug-print",
   "with-json",
 ]
