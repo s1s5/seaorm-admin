@@ -17,10 +17,10 @@ tokio = { version = "^1", features = ["macros", "rt-multi-thread", "io-util"] }
 log = "0.4"
 base64 = "^0.21"
 serde_json = { version = "1" }
-axum = { version = "=0.7.7", features = ["default"], optional = true }
-axum-extra = { version = "=0.9.4", features = ["typed-header"] }
+axum = { version = "=0.8.3", features = ["default"], optional = true }
+axum-extra = { version = "=0.10.1", features = ["typed-header"] }
 bigdecimal = { version = "0.3", default-features = false, optional = true }
-chrono = { version = "0.4.20", default-features = false, optional = true }
+chrono = { version = "^0.4.20", default-features = false, optional = true }
 rust_decimal = { version = "1", default-features = false, optional = true }
 time = { version = "0.3", default-features = false, optional = true }
 uuid = { version = "1", default-features = false, optional = true }
