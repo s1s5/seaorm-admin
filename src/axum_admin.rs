@@ -302,17 +302,17 @@ async fn delete_model(
 pub fn get_router() -> Router {
     Router::new()
         .route("/", get(index))
-        .route("/:model/", get(list))
+        .route("/{model}/", get(list))
         .route(
-            "/:model/create/",
+            "/{model}/create/",
             get(get_create_template).post(create_model),
         )
         .route(
-            "/:model/update/:id/",
+            "/{model}/update/{id}/",
             get(get_update_template).post(update_model),
         )
         .route(
-            "/:model/delete/:id/",
+            "/{model}/delete/{id}/",
             get(get_delete_template).post(delete_model),
         )
 }

@@ -13,7 +13,7 @@ services:
       - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
 
   axum:
-    image: s1s5/rust-dev
+    image: s1s5/rust-dev:1.85
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/axum
     volumes:
@@ -21,7 +21,7 @@ services:
     working_dir: /src/examples/axum
 
   migration:
-    image: s1s5/rust-dev
+    image: s1s5/rust-dev:1.85
     command: ["/bin/bash", "-c", "while true; do sleep 1; done"]
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/axum
